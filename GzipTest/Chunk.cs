@@ -3,7 +3,7 @@ using System.IO;
 
 namespace GzipTest
 {
-    public class Chunk
+    public class Chunk: IDisposable
     {
         public Chunk(long initialOffset, Stream content)
         {
@@ -22,5 +22,9 @@ namespace GzipTest
         //     
         //     return buffer;
         // }
+        public void Dispose()
+        {
+            Content.Dispose();
+        }
     }
 }

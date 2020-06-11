@@ -3,7 +3,6 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.IO;
 using System.IO.MemoryMappedFiles;
-using System.Threading;
 
 namespace GzipTest
 {
@@ -23,52 +22,7 @@ namespace GzipTest
 
         public long From { get; }
         public long Length { get; }
-    }
-
-    public class FileReaderWorker
-    {
-        private readonly string fileName;
-        private readonly Range fileRange;
-        private readonly BlockingCollection<Chunk> queue;
-        private readonly Thread thread;
-        private readonly int batchSize;
-
-        public FileReaderWorker(string fileName, Range fileRange, int batchSize, BlockingCollection<Chunk> queue)
-        {
-            this.fileName = fileName;
-            this.fileRange = fileRange;
-            this.queue = queue;
-            this.batchSize = batchSize;
-
-            thread = new Thread(ReadFile);
-        }
-
-        public void Start()
-        {
-            thread.Start();
-        }
-
-        public void Wait()
-        {
-            thread.Join();
-        }
-
-        private void ReadFile()
-        {
-            using var memoryMappedFile = MemoryMappedFile.CreateFromFile(fileName, FileMode.Open, null);
-
-            var offset = fileRange.From;
-            while (offset < fileRange.Length)
-            {
-                var size = Math.Min(fileRange.Length - offset, batchSize);
-                var viewStream = memoryMappedFile.CreateViewStream(offset, size);
-                var chunk = new Chunk(offset, viewStream);
-                queue.Add(chunk);
-                offset += viewStream.Length;
-            }
-
-            queue.CompleteAdding();
-        }
+        public long To => From + Length;
     }
 
     public class FileReader : IReader
@@ -76,26 +30,50 @@ namespace GzipTest
         private readonly string fileName;
         private readonly uint workersCount;
         private readonly BlockingCollection<Chunk> queue;
-        private List<FileReaderWorker> workers;
-        private Thread thread;
+        private readonly List<FileReaderWorker> workers;
 
         public FileReader(string fileName, uint workersCount)
         {
             this.fileName = fileName;
             this.workersCount = workersCount;
             queue = new BlockingCollection<Chunk>();
-            thread = new Thread(ReadFile);
+            workers = new List<FileReaderWorker>();
         }
 
         public BlockingCollection<Chunk> StartReading()
         {
-            thread.Start();
+            var fileInfo = new FileInfo(fileName);
+
+            var length = fileInfo.Length / workersCount;
+            var start = 0L;
+            const int batchSize = 1024 * 1024;
+            for (var i = 0; i < workersCount - 1; i++)
+            {
+                var range = new Range(start, length);
+                var readerWorker = new FileReaderWorker(fileName, range, batchSize, queue);
+                readerWorker.Start();
+                workers.Add(readerWorker);
+                start = range.To;
+            }
+
+            var remainder = fileInfo.Length % workersCount;
+            var infoLength = remainder == 0 ? fileInfo.Length - start : remainder;
+            var lastRange = new Range(start, infoLength);
+            var worker = new FileReaderWorker(fileName, lastRange, batchSize, queue);
+            worker.Start();
+            workers.Add(worker);
+
             return queue;
         }
 
         public void Wait()
         {
-            thread.Join();
+            foreach (var worker in workers)
+            {
+                worker.Wait();
+            }
+
+            queue.CompleteAdding();
         }
         //
         // private void ReadFile()

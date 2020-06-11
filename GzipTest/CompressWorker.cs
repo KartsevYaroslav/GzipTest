@@ -39,6 +39,7 @@ namespace GzipTest
                 using var gZipStream = new GZipStream(memoryStream, CompressionMode.Compress, true);
                 chunk.Content.CopyTo(gZipStream);
                 gZipStream.Close();
+                chunk.Content.Dispose();
 
                 memoryStream.Position = 0;
                 writer.Write(memoryStream);
