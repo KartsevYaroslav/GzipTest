@@ -1,25 +1,43 @@
 ﻿using System;
+using System.Collections.Concurrent;
 using System.IO;
+using System.Threading;
 
 namespace GzipTest
 {
-    public class FileWriter : IWriter, IDisposable
+    public class FileWriter : IWriter
     {
         private readonly string fileName;
-        private readonly object lockObj;
         private FileStream? fileStream;
+        private BlockingCollection<Stream>? queue;
+        private Thread thread;
 
         public FileWriter(string fileName)
         {
             this.fileName = fileName;
-            lockObj = new object();
+            thread = new Thread(Write);
         }
 
-        public void Write(Stream stream)
+        public void Start(BlockingCollection<Stream> streams)
         {
-            lock (lockObj)
+            queue = streams;
+            fileStream ??= File.Open(fileName, FileMode.OpenOrCreate, FileAccess.Write);
+            thread.Start();
+        }
+
+        public void Wait()
+        {
+            thread.Join();
+        }
+
+        private void Write()
+        {
+            while (true)
             {
-                fileStream ??= File.Open(fileName, FileMode.OpenOrCreate, FileAccess.Write);
+                if (queue.IsAddingCompleted && queue.Count == 0)
+                    break;
+
+                var stream = queue.Take();
                 stream.CopyTo(fileStream);
             }
         }

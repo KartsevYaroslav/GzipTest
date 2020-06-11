@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Concurrent;
 using System.IO;
 using GzipTest;
 
@@ -6,13 +7,16 @@ namespace Benchmark
 {
     public class WriterStub : IWriter
     {
-        public void Write(ReadOnlySpan<byte> bytes)
+        public void Start(BlockingCollection<Stream> streams)
         {
         }
 
-        public void Write(Stream stream)
+        public void Wait()
         {
-            
+        }
+
+        public void Dispose()
+        {
         }
     }
 }

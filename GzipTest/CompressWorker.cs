@@ -1,5 +1,4 @@
-﻿using System;
-using System.Collections.Concurrent;
+﻿using System.Collections.Concurrent;
 using System.IO;
 using System.IO.Compression;
 using System.Threading;
@@ -9,13 +8,13 @@ namespace GzipTest
     public class CompressWorker
     {
         private readonly BlockingCollection<Chunk> chunkQueue;
-        private readonly IWriter writer;
+        private readonly BlockingCollection<Stream> outQueue;
         private readonly Thread thread;
 
-        public CompressWorker(BlockingCollection<Chunk> chunkQueue, IWriter writer)
+        public CompressWorker(BlockingCollection<Chunk> chunkQueue, BlockingCollection<Stream> outQueue)
         {
             this.chunkQueue = chunkQueue;
-            this.writer = writer;
+            this.outQueue = outQueue;
             thread = new Thread(Process);
         }
 
@@ -35,14 +34,14 @@ namespace GzipTest
                     continue;
                 }
 
-                using var memoryStream = new MemoryStream();
+                var memoryStream = new MemoryStream();
                 using var gZipStream = new GZipStream(memoryStream, CompressionMode.Compress, true);
                 chunk.Content.CopyTo(gZipStream);
                 gZipStream.Close();
                 chunk.Content.Dispose();
 
                 memoryStream.Position = 0;
-                writer.Write(memoryStream);
+                outQueue.Add(memoryStream);
             }
         }
 

@@ -1,10 +1,12 @@
 ﻿using System;
+using System.Collections.Concurrent;
 using System.IO;
 
 namespace GzipTest
 {
-    public interface IWriter
+    public interface IWriter: IDisposable
     {
-        void Write(Stream stream);
+        void Start(BlockingCollection<Stream> streams);
+        void Wait();
     }
 }
