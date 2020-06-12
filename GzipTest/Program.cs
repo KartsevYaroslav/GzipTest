@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Diagnostics;
 using System.IO;
 using System.IO.Compression;
 
@@ -7,40 +8,48 @@ namespace GzipTest
     public class Program
     {
         // private const string FileName = @"C:\Users\kartsev\Documents\enwik8.txt";
-        private const string FileName = @"C:\Users\kartsev\Documents\enwik9.txt";
-        private static readonly string TargetFileName = FileName.Replace(".txt", ".gz");
+        // private const string FileName = @"C:\Users\kartsev\Documents\enwik9.txt";
+        // private static readonly string TargetFileName = FileName.Replace(".txt", ".gz");
 
 
         public static int Main(string[] args)
         {
+            var stopwatch = new Stopwatch();
+            stopwatch.Start();
             if (!Enum.TryParse(args[0], true, out CompressionMode mode))
                 throw new ArgumentException("Incorrect arguments");
 
+            if (!File.Exists(args[1]))
+                throw new ArgumentException("incorrect source file name");
 
-            return mode switch
+            if (File.Exists(args[2]))
+                File.Delete(args[2]);
+
+
+            var res = mode switch
             {
-                CompressionMode.Compress => Compress(),
-                CompressionMode.Decompress => Decompress(),
+                CompressionMode.Compress => Compress(args[1], args[2]),
+                CompressionMode.Decompress => Decompress(args[1], args[2]),
                 _ => throw new ArgumentException("Not supported mode")
             };
+
+            stopwatch.Stop();
+            Console.WriteLine($"elapsed {stopwatch.Elapsed.TotalMilliseconds}");
+            return res;
         }
 
-        private static int Decompress()
+        private static int Decompress(string inputFileName, string outputFileName)
         {
-            var fileStream = File.Open(TargetFileName, FileMode.Open);
+            var fileStream = File.Open(inputFileName, FileMode.Open);
             Span<byte> buffer = stackalloc byte[8];
             fileStream.Read(buffer);
             fileStream.Dispose();
             var fileSize = BitConverter.ToInt64(buffer);
 
-            const string newFileName = FileName + "_tmp";
-            if (File.Exists(newFileName))
-                File.Delete(newFileName);
+            File.Create(outputFileName).Dispose();
 
-            File.Create(newFileName).Dispose();
-
-            var reader = new DecompressReader(TargetFileName);
-            var decompressWriter = new DecompressWriter(newFileName, fileSize);
+            var reader = new DecompressReader(inputFileName);
+            var decompressWriter = new DecompressWriter(outputFileName, fileSize, 8);
             var decompressor = new Decompressor(reader, decompressWriter, 8);
 
             decompressor.Start();
@@ -50,19 +59,16 @@ namespace GzipTest
             return 0;
         }
 
-        private static int Compress()
+        private static int Compress(string inputFileName, string outputFileName)
         {
-            if (File.Exists(TargetFileName))
-                File.Delete(TargetFileName);
-
-            var sourceFileInfo = new FileInfo(FileName);
-            var fileStream = File.Create(TargetFileName);
+            var sourceFileInfo = new FileInfo(inputFileName);
+            var fileStream = File.Create(outputFileName);
             var sizeBytes = BitConverter.GetBytes(sourceFileInfo.Length);
             fileStream.Write(sizeBytes);
             fileStream.Dispose();
 
-            using var fileWriter = new FileWriter(TargetFileName);
-            var reader = new FileReader(FileName);
+            using var fileWriter = new FileWriter(outputFileName);
+            var reader = new FileReader(inputFileName);
             var compressor = new Compressor(reader, fileWriter, 8);
 
             compressor.Start();

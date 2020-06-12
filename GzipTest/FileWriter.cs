@@ -29,7 +29,7 @@ namespace GzipTest
 
         private void Write()
         {
-            using var fileStream = File.Open(fileName, FileMode.OpenOrCreate, FileAccess.Write);
+            using var fileStream = File.Open(fileName, FileMode.Open, FileAccess.Write);
 
             var spinWait = new SpinWait();
             fileStream.Position += 8;
