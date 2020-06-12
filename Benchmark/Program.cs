@@ -17,7 +17,7 @@ namespace Benchmark
             var targetFileName = fileName.Replace(".txt", ".gz");
 
             using var fileWriter = new FileWriter(targetFileName);
-            var reader = new FileReader(fileName, Concurrency);
+            var reader = new FileReader(fileName);
             var compressor = new Compressor(reader, fileWriter, Concurrency);
 
             compressor.Start();

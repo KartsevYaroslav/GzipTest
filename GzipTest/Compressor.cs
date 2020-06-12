@@ -19,20 +19,19 @@ namespace GzipTest
             this.writer = writer;
             this.concurrency = concurrency;
             workers = new List<CompressWorker>();
+            streams = new BlockingCollection<Stream>();
         }
 
         public void Start()
         {
             var queue = reader.StartReading();
-            streams = new BlockingCollection<Stream>();
+            writer.Start(streams);
             for (var i = 0; i < concurrency; i++)
             {
                 var worker = new CompressWorker(queue, streams);
                 worker.Start();
                 workers.Add(worker);
             }
-
-            writer.Start(streams);
         }
 
         public void Wait()

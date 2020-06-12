@@ -1,5 +1,4 @@
-﻿using System;
-using System.Collections.Concurrent;
+﻿using System.Collections.Concurrent;
 using System.IO;
 using System.Threading;
 
@@ -32,12 +31,20 @@ namespace GzipTest
 
         private void Write()
         {
+            var spinWait = new SpinWait();
             while (true)
             {
                 if (queue.IsAddingCompleted && queue.Count == 0)
                     break;
 
-                var stream = queue.Take();
+                if (!queue.TryTake(out var stream))
+                {
+                    spinWait.SpinOnce();
+                    continue;
+                }
+
+                spinWait = new SpinWait();
+
                 stream.CopyTo(fileStream);
             }
         }

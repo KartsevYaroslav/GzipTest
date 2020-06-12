@@ -1,7 +1,5 @@
 ﻿using System;
 using System.Diagnostics;
-using System.IO;
-using System.IO.Compression;
 
 namespace GzipTest
 {
@@ -17,7 +15,7 @@ namespace GzipTest
             string targetFileName = FileName.Replace(".txt", ".gz");
 
             using var fileWriter = new FileWriter(targetFileName);
-            var reader = new FileReader(FileName, 8);
+            var reader = new FileReader(FileName);
             var compressor = new Compressor(reader, fileWriter, 8);
 
             compressor.Start();
