@@ -4,9 +4,9 @@ using System.IO;
 
 namespace GzipTest
 {
-    public interface IWriter: IDisposable
+    public interface IWriter<T>: IDisposable
     {
-        void Start(BlockingCollection<Stream> streams);
+        void Start(BlockingCollection<T> streams);
         void Wait();
     }
 }

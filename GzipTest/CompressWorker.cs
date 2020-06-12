@@ -1,4 +1,5 @@
-﻿using System.Collections.Concurrent;
+﻿using System;
+using System.Collections.Concurrent;
 using System.IO;
 using System.IO.Compression;
 using System.Threading;
@@ -35,12 +36,21 @@ namespace GzipTest
                 }
 
                 var memoryStream = new MemoryStream();
-                using var gZipStream = new GZipStream(memoryStream, CompressionMode.Compress, true);
+                
+                memoryStream.Position += 4;
+                var offsetBytes = BitConverter.GetBytes(chunk.InitialOffset);
+                memoryStream.Write(offsetBytes);
+
+                using var gZipStream = new GZipStream(memoryStream, CompressionLevel.Optimal, true);
                 chunk.Content.CopyTo(gZipStream);
                 gZipStream.Close();
                 chunk.Content.Dispose();
 
                 memoryStream.Position = 0;
+                var chunkSize = BitConverter.GetBytes((int) memoryStream.Length - 12);
+                memoryStream.Write(chunkSize);
+                memoryStream.Position = 0;
+
                 outQueue.Add(memoryStream);
             }
         }

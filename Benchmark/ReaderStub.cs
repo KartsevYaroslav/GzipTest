@@ -5,7 +5,7 @@ using GzipTest;
 
 namespace Benchmark
 {
-    public class ReaderStub : IReader
+    public class ReaderStub : IReader<Chunk>
     {
         private readonly uint chunkSize;
         private readonly uint chunksCount;

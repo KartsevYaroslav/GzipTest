@@ -7,9 +7,9 @@ using System.Threading;
 
 namespace GzipTest
 {
-    public interface IReader
+    public interface IReader<T>
     {
-        BlockingCollection<Chunk> StartReading();
+        BlockingCollection<T> StartReading();
         void Wait();
     }
 
@@ -26,7 +26,7 @@ namespace GzipTest
         public long To => From + Length;
     }
 
-    public class FileReader : IReader
+    public class FileReader : IReader<Chunk>
     {
         private readonly string fileName;
         private readonly BlockingCollection<Chunk> queue;
@@ -58,7 +58,7 @@ namespace GzipTest
 
             using var memoryMappedFile = MemoryMappedFile.CreateFromFile(fileName, FileMode.Open, null);
 
-            const int batchSize = 1024 * 1024;
+            const int batchSize = 1024 * 80;
             var offset = 0L;
             while (offset < fileInfo.Length)
             {

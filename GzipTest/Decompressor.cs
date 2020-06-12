@@ -5,30 +5,30 @@ using System.IO;
 
 namespace GzipTest
 {
-    public class Compressor : ICompressor, IDisposable
+    public class Decompressor : ICompressor, IDisposable
     {
-        private readonly IReader<Chunk> reader;
-        private readonly IWriter<Stream> writer;
+        private readonly IReader<Stream> reader;
+        private readonly IWriter<Chunk> writer;
         private readonly uint concurrency;
-        private readonly List<CompressWorker> workers;
-        private BlockingCollection<Stream> streams;
+        private readonly List<DecompressWorker> workers;
+        private readonly BlockingCollection<Chunk> chunkQueue;
 
-        public Compressor(IReader<Chunk> reader, IWriter<Stream> writer, uint concurrency)
+        public Decompressor(IReader<Stream> reader, IWriter<Chunk> writer, uint concurrency)
         {
             this.reader = reader;
             this.writer = writer;
             this.concurrency = concurrency;
-            workers = new List<CompressWorker>();
-            streams = new BlockingCollection<Stream>();
+            workers = new List<DecompressWorker>();
+            chunkQueue = new BlockingCollection<Chunk>();
         }
 
         public void Start()
         {
             var queue = reader.StartReading();
-            writer.Start(streams);
+            writer.Start(chunkQueue);
             for (var i = 0; i < concurrency; i++)
             {
-                var worker = new CompressWorker(queue, streams);
+                var worker = new DecompressWorker(queue, chunkQueue);
                 worker.Start();
                 workers.Add(worker);
             }
@@ -42,13 +42,13 @@ namespace GzipTest
                 worker.Wait();
             }
 
-            streams.CompleteAdding();
+            chunkQueue.CompleteAdding();
             writer.Wait();
         }
 
         public void Dispose()
         {
-            streams.Dispose();
+            chunkQueue.Dispose();
         }
     }
 }

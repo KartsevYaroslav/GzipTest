@@ -4,10 +4,9 @@ using System.Threading;
 
 namespace GzipTest
 {
-    public class FileWriter : IWriter
+    public class FileWriter : IWriter<Stream>
     {
         private readonly string fileName;
-        private FileStream? fileStream;
         private BlockingCollection<Stream>? queue;
         private Thread thread;
 
@@ -20,7 +19,6 @@ namespace GzipTest
         public void Start(BlockingCollection<Stream> streams)
         {
             queue = streams;
-            fileStream ??= File.Open(fileName, FileMode.OpenOrCreate, FileAccess.Write);
             thread.Start();
         }
 
@@ -31,7 +29,10 @@ namespace GzipTest
 
         private void Write()
         {
+            using var fileStream = File.Open(fileName, FileMode.OpenOrCreate, FileAccess.Write);
+
             var spinWait = new SpinWait();
+            fileStream.Position += 8;
             while (true)
             {
                 if (queue.IsAddingCompleted && queue.Count == 0)
@@ -51,8 +52,6 @@ namespace GzipTest
 
         public void Dispose()
         {
-            fileStream?.Flush();
-            fileStream?.Dispose();
         }
     }
 }

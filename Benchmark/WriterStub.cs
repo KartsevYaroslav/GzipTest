@@ -5,7 +5,7 @@ using GzipTest;
 
 namespace Benchmark
 {
-    public class WriterStub : IWriter
+    public class WriterStub : IWriter<Stream>
     {
         public void Start(BlockingCollection<Stream> streams)
         {

@@ -35,17 +35,17 @@ namespace Benchmark
             }
 
 
-            [Benchmark]
-            public void Compress()
-            {
-                const uint totalSize = 10_000_000;
-                var fileWriter = new WriterStub();
-                var reader = new ReaderStub(ChunkSize, totalSize / ChunkSize);
-                var compressor = new Compressor(reader, fileWriter, 8);
-
-                compressor.Start();
-                compressor.Wait();
-            }
+            // [Benchmark]
+            // public void Compress()
+            // {
+            //     const uint totalSize = 10_000_000;
+            //     var fileWriter = new WriterStub();
+            //     var reader = new ReaderStub(ChunkSize, totalSize / ChunkSize);
+            //     var compressor = new Compressor(reader, fileWriter, 8);
+            //
+            //     compressor.Start();
+            //     compressor.Wait();
+            // }
         }
 
         public static class Program
