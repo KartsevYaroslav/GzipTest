@@ -49,6 +49,7 @@ namespace GzipTest
         public void Dispose()
         {
             chunkQueue.Dispose();
+            writer.Dispose();
         }
     }
 }

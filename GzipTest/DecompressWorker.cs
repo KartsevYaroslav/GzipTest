@@ -30,12 +30,14 @@ namespace GzipTest
                 if (streamQueue.IsAddingCompleted && streamQueue.Count == 0)
                     break;
 
-                if (!streamQueue.TryTake(out var stream) || chunkQueue.Count > 10)
+                if (chunkQueue.Count > 10)
                 {
                     spinner.SpinOnce();
                     continue;
                 }
-                
+
+                var stream = streamQueue.Take();
+
                 spinner = new SpinWait();
                 
                 stream.Read(buffer);
