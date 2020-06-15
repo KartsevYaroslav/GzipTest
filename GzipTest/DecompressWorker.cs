@@ -30,16 +30,14 @@ namespace GzipTest
                 if (streamQueue.IsAddingCompleted && streamQueue.Count == 0)
                     break;
 
-                if (chunkQueue.Count > 10)
+                if (chunkQueue.Count > 10 || !streamQueue.TryTake(out var stream))
                 {
                     spinner.SpinOnce();
                     continue;
                 }
 
-                var stream = streamQueue.Take();
-
                 spinner = new SpinWait();
-                
+
                 stream.Read(buffer);
                 var initialOffset = BitConverter.ToInt64(buffer);
 
@@ -49,7 +47,7 @@ namespace GzipTest
                 stream.Dispose();
                 gZipStream.Close();
                 memoryStream.Position = 0;
-                
+
                 var chunk = new Chunk(initialOffset, memoryStream);
 
                 chunkQueue.Add(chunk);

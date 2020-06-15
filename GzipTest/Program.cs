@@ -34,7 +34,7 @@ namespace GzipTest
             };
 
             stopwatch.Stop();
-            Console.WriteLine($"elapsed {stopwatch.Elapsed.TotalMilliseconds}");
+            Console.WriteLine($"elapsed {stopwatch.ElapsedMilliseconds}");
             return res;
         }
 

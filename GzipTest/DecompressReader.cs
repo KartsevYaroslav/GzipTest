@@ -61,7 +61,6 @@ namespace GzipTest
 
             using var memoryMappedFile = MemoryMappedFile.CreateFromFile(fileName, FileMode.Open, null);
 
-            const int batchSize = 1024 * 80;
             var offset = 8L;
 
             Span<byte> sizeBuffer = stackalloc byte[4];
@@ -75,8 +74,10 @@ namespace GzipTest
                 }
 
                 spinWait = new SpinWait();
-                using var tmpStream = memoryMappedFile.CreateViewStream(offset, 4);
-                tmpStream.Read(sizeBuffer);
+                using (var tmpStream = memoryMappedFile.CreateViewStream(offset, 4))
+                {
+                    tmpStream.Read(sizeBuffer);
+                }
 
                 var size = BitConverter.ToInt32(sizeBuffer);
                 var viewStream = memoryMappedFile.CreateViewStream(offset + 4, size + 8);
