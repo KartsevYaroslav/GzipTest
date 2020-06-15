@@ -2,16 +2,17 @@
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.IO;
+using GzipTest.Compress;
 
 namespace GzipTest
 {
-    public class Decompressor : ICompressor, IDisposable
+    public class Decompressor : IWorker, IDisposable
     {
         private readonly IReader<Stream> reader;
         private readonly IWriter<Chunk> writer;
         private readonly uint concurrency;
         private readonly List<DecompressWorker> workers;
-        private readonly BlockingCollection<Chunk> chunkQueue;
+        private readonly BoundedList<Chunk> chunkQueue;
 
         public Decompressor(IReader<Stream> reader, IWriter<Chunk> writer, uint concurrency)
         {
@@ -19,7 +20,7 @@ namespace GzipTest
             this.writer = writer;
             this.concurrency = concurrency;
             workers = new List<DecompressWorker>();
-            chunkQueue = new BlockingCollection<Chunk>();
+            chunkQueue = new BoundedList<Chunk>(8);
         }
 
         public void Start()
@@ -48,7 +49,8 @@ namespace GzipTest
 
         public void Dispose()
         {
-            chunkQueue.Dispose();
+            // chunkQueue.Dispose();
+            reader.Dispose();
             writer.Dispose();
         }
     }

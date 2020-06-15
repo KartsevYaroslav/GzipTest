@@ -1,46 +1,28 @@
 ﻿using System;
 using System.Collections.Concurrent;
-using System.Collections.Generic;
 using System.IO;
 using System.IO.MemoryMappedFiles;
 using System.Threading;
 
-namespace GzipTest
+namespace GzipTest.Compress
 {
-    public interface IReader<T>
-    {
-        BlockingCollection<T> StartReading();
-        void Wait();
-    }
-
-    public class Range
-    {
-        public Range(long @from, long length)
-        {
-            From = @from;
-            Length = length;
-        }
-
-        public long From { get; }
-        public long Length { get; }
-        public long To => From + Length;
-    }
-
     public class FileReader : IReader<Chunk>
     {
         private readonly string fileName;
-        private readonly BlockingCollection<Chunk> queue;
+        private readonly BoundedList<Chunk> queue;
         private readonly Thread thread;
+        private readonly MemoryMappedFile memoryMappedFile;
 
         public FileReader(string fileName)
         {
             this.fileName = fileName;
-            queue = new BlockingCollection<Chunk>();
+            queue = new BoundedList<Chunk>(8);
+            memoryMappedFile = MemoryMappedFile.CreateFromFile(fileName, FileMode.Open, null);
 
             thread = new Thread(ReadFile);
         }
 
-        public BlockingCollection<Chunk> StartReading()
+        public BoundedList<Chunk> StartReading()
         {
             thread.Start();
             return queue;
@@ -56,8 +38,6 @@ namespace GzipTest
         {
             var fileInfo = new FileInfo(fileName);
 
-            using var memoryMappedFile = MemoryMappedFile.CreateFromFile(fileName, FileMode.Open, null);
-
             const int batchSize = 1024 * 80;
             var offset = 0L;
             while (offset < fileInfo.Length)
@@ -70,6 +50,11 @@ namespace GzipTest
             }
 
             queue.CompleteAdding();
+        }
+
+        public void Dispose()
+        {
+            memoryMappedFile?.Dispose();
         }
     }
 }

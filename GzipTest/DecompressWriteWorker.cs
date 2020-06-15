@@ -2,6 +2,7 @@
 using System.Collections.Concurrent;
 using System.IO.MemoryMappedFiles;
 using System.Threading;
+using GzipTest.Compress;
 
 namespace GzipTest
 {
@@ -9,10 +10,10 @@ namespace GzipTest
     {
         private readonly MemoryMappedFile memoryMappedFile;
         private readonly long fileSize;
-        private readonly BlockingCollection<Chunk> chunks;
+        private readonly BoundedList<Chunk> chunks;
         private readonly Thread thread;
 
-        public DecompressWriteWorker(MemoryMappedFile memoryMappedFile, long fileSize, BlockingCollection<Chunk> chunks)
+        public DecompressWriteWorker(MemoryMappedFile memoryMappedFile, long fileSize, BoundedList<Chunk> chunks)
         {
             this.memoryMappedFile = memoryMappedFile;
             this.fileSize = fileSize;

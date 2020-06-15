@@ -3,15 +3,15 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.IO;
 
-namespace GzipTest
+namespace GzipTest.Compress
 {
-    public class Compressor : ICompressor, IDisposable
+    public class Compressor : IWorker
     {
         private readonly IReader<Chunk> reader;
         private readonly IWriter<Stream> writer;
         private readonly uint concurrency;
         private readonly List<CompressWorker> workers;
-        private BlockingCollection<Stream> streams;
+        private BoundedList<Stream> streams;
 
         public Compressor(IReader<Chunk> reader, IWriter<Stream> writer, uint concurrency)
         {
@@ -19,7 +19,7 @@ namespace GzipTest
             this.writer = writer;
             this.concurrency = concurrency;
             workers = new List<CompressWorker>();
-            streams = new BlockingCollection<Stream>();
+            streams = new BoundedList<Stream>(8);
         }
 
         public void Start()
@@ -48,7 +48,9 @@ namespace GzipTest
 
         public void Dispose()
         {
-            streams.Dispose();
+            // streams.Dispose();
+            writer.Dispose();
+            reader.Dispose();
         }
     }
 }

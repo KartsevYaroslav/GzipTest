@@ -1,27 +1,26 @@
 ﻿using System;
-using System.Buffers;
-using System.Collections.Concurrent;
 using System.IO;
 using System.IO.MemoryMappedFiles;
 using System.Threading;
+using GzipTest.Compress;
 
 namespace GzipTest
 {
     public class DecompressReader : IReader<Stream>
     {
         private readonly string fileName;
-        private readonly BlockingCollection<Stream> queue;
+        private readonly BoundedList<Stream> queue;
         private readonly Thread thread;
 
         public DecompressReader(string fileName)
         {
             this.fileName = fileName;
-            queue = new BlockingCollection<Stream>();
+            queue = new BoundedList<Stream>(8);
 
             thread = new Thread(ReadFile);
         }
 
-        public BlockingCollection<Stream> StartReading()
+        public BoundedList<Stream> StartReading()
         {
             thread.Start();
             return queue;
@@ -36,44 +35,13 @@ namespace GzipTest
         private void ReadFile()
         {
             var fileInfo = new FileInfo(fileName);
-            //
-            // using var fileStream = File.Open(fileName, FileMode.Open, FileAccess.Read);
-            // fileStream.Position += 8;
-            //
-            // var remainSize = fileStream.Length;
-            // var memoryPool = MemoryPool<byte>.Shared;
-            // using var memoryOwner = memoryPool.Rent(1024 * 80);
-            // var buffer = memoryOwner.Memory.Span;
-            // var sizeBuffer = buffer.Slice(0, 4);
-            // while (remainSize > 0)
-            // {
-            //     var memoryStream = new MemoryStream();
-            //     fileStream.Read(sizeBuffer);
-            //
-            //     var size = BitConverter.ToInt32(sizeBuffer);
-            //     var contentBuffer = buffer.Slice(0, size + 8);
-            //     var readBytes = fileStream.Read(contentBuffer);
-            //     memoryStream.Write(contentBuffer.Slice(0, readBytes));
-            //     queue.Add(memoryStream);
-            //
-            //     remainSize -= readBytes;
-            // }
-
             using var memoryMappedFile = MemoryMappedFile.CreateFromFile(fileName, FileMode.Open, null);
 
             var offset = 8L;
 
             Span<byte> sizeBuffer = stackalloc byte[4];
-            var spinWait = new SpinWait();
             while (offset < fileInfo.Length)
             {
-                if (queue.Count > 10)
-                {
-                    spinWait.SpinOnce();
-                    continue;
-                }
-
-                spinWait = new SpinWait();
                 using (var tmpStream = memoryMappedFile.CreateViewStream(offset, 4))
                 {
                     tmpStream.Read(sizeBuffer);
@@ -86,6 +54,10 @@ namespace GzipTest
             }
 
             queue.CompleteAdding();
+        }
+
+        public void Dispose()
+        {
         }
     }
 }

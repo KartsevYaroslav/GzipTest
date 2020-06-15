@@ -1,5 +1,5 @@
-﻿using System;
-using System.IO;
+﻿using System.IO;
+using System.IO.Compression;
 using FluentAssertions;
 using NUnit.Framework;
 
@@ -32,36 +32,17 @@ namespace GzipTest.Tests
         [Test]
         public void Should_compress_and_decompress()
         {
-            var sourceFileInfo = new FileInfo(FileToZip);
-            var sourceStream = File.Create(ZipFile);
-            var sizeBytes = BitConverter.GetBytes(sourceFileInfo.Length);
-            sourceStream.Write(sizeBytes);
-            sourceStream.Dispose();
-            using (var fileWriter = new FileWriter(ZipFile))
+            using (var compressor = Gzip.Worker(CompressionMode.Compress, FileToZip, ZipFile))
             {
-                var reader = new FileReader(FileToZip);
-                using (var compressor = new Compressor(reader, fileWriter, 8))
-                {
-                    compressor.Start();
-                    compressor.Wait();
-                }
+                compressor.Start();
+                compressor.Wait();
             }
 
-
-            var fileStream = File.Open(ZipFile, FileMode.Open);
-            Span<byte> buffer = stackalloc byte[8];
-            fileStream.Read(buffer);
-            fileStream.Dispose();
-            var fileSize = BitConverter.ToInt64(buffer);
-            var decompressReader = new DecompressReader(ZipFile);
-            var decompressWriter = new DecompressWriter(UnzipFile, fileSize, 8);
-            using (var decompressor = new Decompressor(decompressReader, decompressWriter, 8))
+            using (var decompressor = Gzip.Worker(CompressionMode.Decompress, ZipFile, UnzipFile))
             {
                 decompressor.Start();
                 decompressor.Wait();
             }
-
-            decompressWriter.Dispose();
 
             FileEquals().Should().BeTrue();
         }

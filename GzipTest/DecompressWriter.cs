@@ -1,7 +1,7 @@
-﻿using System.Collections.Concurrent;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.IO;
 using System.IO.MemoryMappedFiles;
+using GzipTest.Compress;
 
 namespace GzipTest
 {
@@ -11,7 +11,7 @@ namespace GzipTest
         private readonly long fileSize;
         private readonly int concurrency;
         private FileStream? fileStream;
-        private BlockingCollection<Chunk>? queue;
+        private BoundedList<Chunk>? queue;
         private readonly List<DecompressWriteWorker> workers;
         private MemoryMappedFile? memoryMappedFile;
 
@@ -23,12 +23,12 @@ namespace GzipTest
             workers = new List<DecompressWriteWorker>();
         }
 
-        public void Start(BlockingCollection<Chunk> streams)
+        public void Start(BoundedList<Chunk> streams)
         {
             memoryMappedFile = MemoryMappedFile.CreateFromFile(fileName, FileMode.Open, null, fileSize,
                 MemoryMappedFileAccess.ReadWrite);
             queue = streams;
-            for (int i = 0; i < concurrency; i++)
+            for (var i = 0; i < concurrency; i++)
             {
                 var worker = new DecompressWriteWorker(memoryMappedFile, fileSize, queue);
                 worker.Start();

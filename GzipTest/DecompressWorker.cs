@@ -3,16 +3,17 @@ using System.Collections.Concurrent;
 using System.IO;
 using System.IO.Compression;
 using System.Threading;
+using GzipTest.Compress;
 
 namespace GzipTest
 {
     public class DecompressWorker
     {
-        private readonly BlockingCollection<Chunk> chunkQueue;
-        private readonly BlockingCollection<Stream> streamQueue;
+        private readonly BoundedList<Chunk> chunkQueue;
+        private readonly BoundedList<Stream> streamQueue;
         private readonly Thread thread;
 
-        public DecompressWorker(BlockingCollection<Stream> streamQueue, BlockingCollection<Chunk> chunkQueue)
+        public DecompressWorker(BoundedList<Stream> streamQueue, BoundedList<Chunk> chunkQueue)
         {
             this.chunkQueue = chunkQueue;
             this.streamQueue = streamQueue;
@@ -30,7 +31,7 @@ namespace GzipTest
                 if (streamQueue.IsAddingCompleted && streamQueue.Count == 0)
                     break;
 
-                if (chunkQueue.Count > 10 || !streamQueue.TryTake(out var stream))
+                if (!streamQueue.TryTake(out var stream))
                 {
                     spinner.SpinOnce();
                     continue;
@@ -41,7 +42,7 @@ namespace GzipTest
                 stream.Read(buffer);
                 var initialOffset = BitConverter.ToInt64(buffer);
 
-                var memoryStream = new MemoryStream();
+                var memoryStream = new MemoryStream(1024 * 80);
                 using var gZipStream = new GZipStream(stream, CompressionMode.Decompress);
                 gZipStream.CopyTo(memoryStream);
                 stream.Dispose();

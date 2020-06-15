@@ -4,15 +4,15 @@ using System.IO;
 using System.IO.Compression;
 using System.Threading;
 
-namespace GzipTest
+namespace GzipTest.Compress
 {
     public class CompressWorker
     {
-        private readonly BlockingCollection<Chunk> chunkQueue;
-        private readonly BlockingCollection<Stream> outQueue;
+        private readonly BoundedList<Chunk> chunkQueue;
+        private readonly BoundedList<Stream> outQueue;
         private readonly Thread thread;
 
-        public CompressWorker(BlockingCollection<Chunk> chunkQueue, BlockingCollection<Stream> outQueue)
+        public CompressWorker(BoundedList<Chunk> chunkQueue, BoundedList<Stream> outQueue)
         {
             this.chunkQueue = chunkQueue;
             this.outQueue = outQueue;

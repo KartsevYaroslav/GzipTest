@@ -1,7 +1,9 @@
 ﻿
+using System;
+
 namespace GzipTest
 {
-    internal interface ICompressor
+    public interface IWorker : IDisposable
     {
         void Start();
         void Wait();

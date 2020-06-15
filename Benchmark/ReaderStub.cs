@@ -2,6 +2,7 @@
 using System.Collections.Concurrent;
 using System.IO;
 using GzipTest;
+using GzipTest.Compress;
 
 namespace Benchmark
 {
@@ -16,10 +17,10 @@ namespace Benchmark
             this.chunksCount = chunksCount;
         }
 
-        public BlockingCollection<Chunk> StartReading()
+        public BoundedList<Chunk> StartReading()
         {
             var random = new Random();
-            var queue = new BlockingCollection<Chunk>();
+            var queue = new BoundedList<Chunk>(8);
             for (var i = 0; i < chunksCount; i++)
             {
                 var bytes = new byte[chunkSize];
@@ -32,6 +33,10 @@ namespace Benchmark
         }
 
         public void Wait()
+        {
+        }
+
+        public void Dispose()
         {
         }
     }

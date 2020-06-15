@@ -2,12 +2,12 @@
 using System.IO;
 using System.Threading;
 
-namespace GzipTest
+namespace GzipTest.Compress
 {
     public class FileWriter : IWriter<Stream>
     {
         private readonly string fileName;
-        private BlockingCollection<Stream>? queue;
+        private BoundedList<Stream>? queue;
         private Thread thread;
 
         public FileWriter(string fileName)
@@ -16,7 +16,7 @@ namespace GzipTest
             thread = new Thread(Write);
         }
 
-        public void Start(BlockingCollection<Stream> streams)
+        public void Start(BoundedList<Stream> streams)
         {
             queue = streams;
             thread.Start();
