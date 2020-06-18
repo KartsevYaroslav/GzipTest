@@ -1,19 +1,17 @@
 ﻿using System;
-using System.Collections.Concurrent;
 using System.IO;
 using System.IO.Compression;
 using System.Threading;
-using GzipTest.Compress;
 
-namespace GzipTest
+namespace GzipTest.Decompress
 {
     public class DecompressWorker
     {
-        private readonly BoundedList<Chunk> chunkQueue;
-        private readonly BoundedList<Stream> streamQueue;
+        private readonly BlockingBag<Chunk> chunkQueue;
+        private readonly BlockingBag<Stream> streamQueue;
         private readonly Thread thread;
 
-        public DecompressWorker(BoundedList<Stream> streamQueue, BoundedList<Chunk> chunkQueue)
+        public DecompressWorker(BlockingBag<Stream> streamQueue, BlockingBag<Chunk> chunkQueue)
         {
             this.chunkQueue = chunkQueue;
             this.streamQueue = streamQueue;

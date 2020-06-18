@@ -1,22 +1,17 @@
-﻿using System;
-using System.Collections.Concurrent;
-using System.IO.MemoryMappedFiles;
+﻿using System.IO.MemoryMappedFiles;
 using System.Threading;
-using GzipTest.Compress;
 
-namespace GzipTest
+namespace GzipTest.Decompress
 {
     public class DecompressWriteWorker
     {
         private readonly MemoryMappedFile memoryMappedFile;
-        private readonly long fileSize;
-        private readonly BoundedList<Chunk> chunks;
+        private readonly BlockingBag<Chunk> chunks;
         private readonly Thread thread;
 
-        public DecompressWriteWorker(MemoryMappedFile memoryMappedFile, long fileSize, BoundedList<Chunk> chunks)
+        public DecompressWriteWorker(MemoryMappedFile memoryMappedFile, BlockingBag<Chunk> chunks)
         {
             this.memoryMappedFile = memoryMappedFile;
-            this.fileSize = fileSize;
             this.chunks = chunks;
             thread = new Thread(Write);
         }

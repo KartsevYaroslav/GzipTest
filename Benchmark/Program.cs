@@ -22,19 +22,17 @@ namespace Benchmark
         [Benchmark]
         public void CompressReadAndWrite()
         {
-            using var compressor = Gzip.Worker(CompressionMode.Compress, FileToZip, ZipFile);
+            using var compressor = Gzip.Processor(CompressionMode.Compress, FileToZip, ZipFile);
         
-            compressor.Start();
-            compressor.Wait();
+            compressor.Process();
         }
 
         [Benchmark]
         public void DecompressReadAndWrite()
         {
-            using var decompressor = Gzip.Worker(CompressionMode.Decompress, FileToUnzip, UnzipFile);
+            using var decompressor = Gzip.Processor(CompressionMode.Decompress, FileToUnzip, UnzipFile);
 
-            decompressor.Start();
-            decompressor.Wait();
+            decompressor.Process();
         }
 
         [IterationSetup]

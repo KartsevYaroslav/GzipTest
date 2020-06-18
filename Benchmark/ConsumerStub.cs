@@ -6,13 +6,13 @@ using GzipTest.Compress;
 
 namespace Benchmark
 {
-    public class WriterStub : IWriter<Stream>
+    public class ConsumerStub : IConsumer<Stream>
     {
         public void Start(BlockingCollection<Stream> streams)
         {
         }
 
-        public void Start(BoundedList<Stream> streams)
+        public void StartConsuming(BlockingBag<Stream> bag)
         {
             throw new NotImplementedException();
         }

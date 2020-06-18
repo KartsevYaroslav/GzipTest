@@ -5,9 +5,10 @@ using GzipTest.Compress;
 
 namespace GzipTest
 {
-    public interface IWriter<T>: IDisposable
+    public interface IConsumer<T> : IDisposable
+        where T : IDisposable
     {
-        void Start(BoundedList<T> streams);
+        void StartConsuming(BlockingBag<T> bag);
         void Wait();
     }
 }

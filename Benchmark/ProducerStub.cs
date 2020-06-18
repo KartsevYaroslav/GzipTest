@@ -6,21 +6,21 @@ using GzipTest.Compress;
 
 namespace Benchmark
 {
-    public class ReaderStub : IReader<Chunk>
+    public class ProducerStub : IProducer<Chunk>
     {
         private readonly uint chunkSize;
         private readonly uint chunksCount;
 
-        public ReaderStub(uint chunkSize, uint chunksCount)
+        public ProducerStub(uint chunkSize, uint chunksCount)
         {
             this.chunkSize = chunkSize;
             this.chunksCount = chunksCount;
         }
 
-        public BoundedList<Chunk> StartReading()
+        public BlockingBag<Chunk> StartProducing()
         {
             var random = new Random();
-            var queue = new BoundedList<Chunk>(8);
+            var queue = new BlockingBag<Chunk>(8);
             for (var i = 0; i < chunksCount; i++)
             {
                 var bytes = new byte[chunkSize];

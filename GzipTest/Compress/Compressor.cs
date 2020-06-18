@@ -1,56 +1,61 @@
-﻿using System;
-using System.Collections.Concurrent;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.IO;
 
 namespace GzipTest.Compress
 {
-    public class Compressor : IWorker
+    public class Compressor : IProcessor
     {
-        private readonly IReader<Chunk> reader;
-        private readonly IWriter<Stream> writer;
+        private readonly IProducer<Chunk> producer;
+        private readonly IConsumer<Stream> consumer;
         private readonly uint concurrency;
         private readonly List<CompressWorker> workers;
-        private BoundedList<Stream> streams;
+        private readonly BlockingBag<Stream> streams;
+        private BlockingBag<Chunk>? chunks;
 
-        public Compressor(IReader<Chunk> reader, IWriter<Stream> writer, uint concurrency)
+        public Compressor(IProducer<Chunk> producer, IConsumer<Stream> consumer, uint concurrency)
         {
-            this.reader = reader;
-            this.writer = writer;
+            this.producer = producer;
+            this.consumer = consumer;
             this.concurrency = concurrency;
             workers = new List<CompressWorker>();
-            streams = new BoundedList<Stream>(8);
+            streams = new BlockingBag<Stream>(8);
         }
 
-        public void Start()
+        public void Process()
         {
-            var queue = reader.StartReading();
-            writer.Start(streams);
+            Start();
+            Wait();
+        }
+
+        private void Start()
+        {
+            chunks = producer.StartProducing();
+            consumer.StartConsuming(streams);
             for (var i = 0; i < concurrency; i++)
             {
-                var worker = new CompressWorker(queue, streams);
+                var worker = new CompressWorker(chunks, streams);
                 worker.Start();
                 workers.Add(worker);
             }
         }
 
-        public void Wait()
+        private void Wait()
         {
-            reader.Wait();
+            producer.Wait();
             foreach (var worker in workers)
             {
                 worker.Wait();
             }
 
             streams.CompleteAdding();
-            writer.Wait();
+            consumer.Wait();
         }
 
         public void Dispose()
         {
-            // streams.Dispose();
-            writer.Dispose();
-            reader.Dispose();
+            producer.Dispose();
+            streams.Dispose();
+            chunks?.Dispose();
         }
     }
 }

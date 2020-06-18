@@ -2,25 +2,24 @@
 using System.IO;
 using System.IO.MemoryMappedFiles;
 using System.Threading;
-using GzipTest.Compress;
 
-namespace GzipTest
+namespace GzipTest.Decompress
 {
-    public class DecompressReader : IReader<Stream>
+    public class DecompressFileReader : IProducer<Stream>
     {
         private readonly string fileName;
-        private readonly BoundedList<Stream> queue;
+        private readonly BlockingBag<Stream> queue;
         private readonly Thread thread;
 
-        public DecompressReader(string fileName)
+        public DecompressFileReader(string fileName)
         {
             this.fileName = fileName;
-            queue = new BoundedList<Stream>(8);
+            queue = new BlockingBag<Stream>(8);
 
             thread = new Thread(ReadFile);
         }
 
-        public BoundedList<Stream> StartReading()
+        public BlockingBag<Stream> StartProducing()
         {
             thread.Start();
             return queue;
@@ -58,6 +57,7 @@ namespace GzipTest
 
         public void Dispose()
         {
+            thread.Interrupt();
         }
     }
 }

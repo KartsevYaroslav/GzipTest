@@ -4,18 +4,19 @@ using System.Threading;
 
 namespace GzipTest
 {
-    public class BoundedList<T>
+    public class BlockingBag<T> : IDisposable
+        where T : IDisposable
     {
         private readonly LinkedList<T> buffer;
         private readonly object lockObj;
         private int isCompleted;
         private readonly Semaphore semaphore;
 
-        public BoundedList(int capacity)
+        public BlockingBag(int capacity)
         {
             buffer = new LinkedList<T>();
             lockObj = new object();
-            semaphore = new Semaphore(capacity,capacity);
+            semaphore = new Semaphore(capacity, capacity);
         }
 
         public bool TryTake(out T value)
@@ -26,10 +27,10 @@ namespace GzipTest
             {
                 if (Count == 0)
                     return false;
-                
-                if(buffer.First == null)
+
+                if (buffer.First == null)
                     throw new InvalidOperationException("");
-                
+
                 value = buffer.First.Value;
                 buffer.RemoveFirst();
                 semaphore.Release();
@@ -51,7 +52,7 @@ namespace GzipTest
             isCompleted = 1;
         }
 
-        public bool IsAddingCompleted => Interlocked.CompareExchange(ref isCompleted, 0, 0) != 0;
+        public bool IsAddingCompleted => isCompleted == 1;
         public int Count => GetCount();
 
         private int GetCount()
@@ -59,6 +60,15 @@ namespace GzipTest
             lock (lockObj)
             {
                 return buffer.Count;
+            }
+        }
+
+        public void Dispose()
+        {
+            semaphore.Dispose();
+            foreach (var element in buffer)
+            {
+                element.Dispose();
             }
         }
     }

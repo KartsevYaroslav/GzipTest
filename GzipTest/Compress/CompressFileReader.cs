@@ -1,28 +1,27 @@
 ﻿using System;
-using System.Collections.Concurrent;
 using System.IO;
 using System.IO.MemoryMappedFiles;
 using System.Threading;
 
 namespace GzipTest.Compress
 {
-    public class FileReader : IReader<Chunk>
+    public class CompressFileReader : IProducer<Chunk>
     {
         private readonly string fileName;
-        private readonly BoundedList<Chunk> queue;
+        private readonly BlockingBag<Chunk> queue;
         private readonly Thread thread;
         private readonly MemoryMappedFile memoryMappedFile;
 
-        public FileReader(string fileName)
+        public CompressFileReader(string fileName)
         {
             this.fileName = fileName;
-            queue = new BoundedList<Chunk>(8);
+            queue = new BlockingBag<Chunk>(8);
             memoryMappedFile = MemoryMappedFile.CreateFromFile(fileName, FileMode.Open, null);
 
             thread = new Thread(ReadFile);
         }
 
-        public BoundedList<Chunk> StartReading()
+        public BlockingBag<Chunk> StartProducing()
         {
             thread.Start();
             return queue;

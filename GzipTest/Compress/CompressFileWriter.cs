@@ -1,24 +1,23 @@
-﻿using System.Collections.Concurrent;
-using System.IO;
+﻿using System.IO;
 using System.Threading;
 
 namespace GzipTest.Compress
 {
-    public class FileWriter : IWriter<Stream>
+    public class CompressFileWriter : IConsumer<Stream>
     {
         private readonly string fileName;
-        private BoundedList<Stream>? queue;
-        private Thread thread;
+        private BlockingBag<Stream>? queue;
+        private readonly Thread thread;
 
-        public FileWriter(string fileName)
+        public CompressFileWriter(string fileName)
         {
             this.fileName = fileName;
             thread = new Thread(Write);
         }
 
-        public void Start(BoundedList<Stream> streams)
+        public void StartConsuming(BlockingBag<Stream> bag)
         {
-            queue = streams;
+            queue = bag;
             thread.Start();
         }
 
