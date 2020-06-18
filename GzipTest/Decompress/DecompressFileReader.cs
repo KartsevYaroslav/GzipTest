@@ -57,7 +57,6 @@ namespace GzipTest.Decompress
 
         public void Dispose()
         {
-            thread.Interrupt();
         }
     }
 }

@@ -1,5 +1,6 @@
 ﻿using System.Collections.Generic;
 using System.IO;
+using GzipTest.Compress;
 
 namespace GzipTest.Decompress
 {
@@ -8,7 +9,7 @@ namespace GzipTest.Decompress
         private readonly IProducer<Stream> producer;
         private readonly IConsumer<Chunk> consumer;
         private readonly uint concurrency;
-        private readonly List<DecompressWorker> workers;
+        private readonly List<TransformWorker<Stream, Chunk>> workers;
         private readonly BlockingBag<Chunk> chunkQueue;
         private BlockingBag<Stream>? queue;
 
@@ -17,7 +18,7 @@ namespace GzipTest.Decompress
             this.producer = producer;
             this.consumer = consumer;
             this.concurrency = concurrency;
-            workers = new List<DecompressWorker>();
+            workers = new List<TransformWorker<Stream, Chunk>>();
             chunkQueue = new BlockingBag<Chunk>(8);
         }
 
@@ -33,7 +34,7 @@ namespace GzipTest.Decompress
             consumer.StartConsuming(chunkQueue);
             for (var i = 0; i < concurrency; i++)
             {
-                var worker = new DecompressWorker(queue, chunkQueue);
+                var worker = new TransformWorker<Stream, Chunk>(queue, chunkQueue, Chunk.FromCompressedStream);
                 worker.Start();
                 workers.Add(worker);
             }

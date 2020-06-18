@@ -8,17 +8,23 @@ namespace GzipTest
 {
     public static class Gzip
     {
-        public static IProcessor Processor(CompressionMode mode, string inputFileName, string outputFileName)
+        public static IProcessor Processor(
+            CompressionMode mode,
+            string inputFileName,
+            string outputFileName,
+            uint? concurrency = null
+        )
         {
+            concurrency ??= (uint) Environment.ProcessorCount;
             return mode switch
             {
-                CompressionMode.Compress => CreateCompressor(inputFileName, outputFileName),
-                CompressionMode.Decompress => CreateDecompressor(inputFileName, outputFileName),
+                CompressionMode.Compress => CreateCompressor(inputFileName, outputFileName, concurrency.Value),
+                CompressionMode.Decompress => CreateDecompressor(inputFileName, outputFileName, concurrency.Value),
                 _ => throw new ArgumentException("Not supported mode")
             };
         }
 
-        private static IProcessor CreateCompressor(string inputFileName, string outputFileName)
+        private static IProcessor CreateCompressor(string inputFileName, string outputFileName, uint concurrency)
         {
             var sourceFileInfo = new FileInfo(inputFileName);
             var fileStream = File.Create(outputFileName);
@@ -28,10 +34,10 @@ namespace GzipTest
 
             var fileWriter = new CompressFileWriter(outputFileName);
             var reader = new CompressFileReader(inputFileName);
-            return new Compressor(reader, fileWriter, 8);
+            return new Compressor(reader, fileWriter, concurrency);
         }
 
-        private static IProcessor CreateDecompressor(string inputFileName, string outputFileName)
+        private static IProcessor CreateDecompressor(string inputFileName, string outputFileName, uint concurrency)
         {
             var fileStream = File.Open(inputFileName, FileMode.Open);
             Span<byte> buffer = stackalloc byte[8];
@@ -41,8 +47,8 @@ namespace GzipTest
             File.Create(outputFileName).Dispose();
 
             var reader = new DecompressFileReader(inputFileName);
-            var decompressWriter = new DecompressFileWriter(outputFileName, fileSize, 16);
-            return new Decompressor(reader, decompressWriter, 8);
+            var decompressWriter = new DecompressFileWriter(outputFileName, fileSize, concurrency);
+            return new Decompressor(reader, decompressWriter, concurrency);
         }
     }
 }

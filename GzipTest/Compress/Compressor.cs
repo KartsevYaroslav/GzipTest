@@ -8,7 +8,7 @@ namespace GzipTest.Compress
         private readonly IProducer<Chunk> producer;
         private readonly IConsumer<Stream> consumer;
         private readonly uint concurrency;
-        private readonly List<CompressWorker> workers;
+        private readonly List<TransformWorker<Chunk, Stream>> workers;
         private readonly BlockingBag<Stream> streams;
         private BlockingBag<Chunk>? chunks;
 
@@ -17,7 +17,7 @@ namespace GzipTest.Compress
             this.producer = producer;
             this.consumer = consumer;
             this.concurrency = concurrency;
-            workers = new List<CompressWorker>();
+            workers = new List<TransformWorker<Chunk, Stream>>();
             streams = new BlockingBag<Stream>(8);
         }
 
@@ -33,7 +33,7 @@ namespace GzipTest.Compress
             consumer.StartConsuming(streams);
             for (var i = 0; i < concurrency; i++)
             {
-                var worker = new CompressWorker(chunks, streams);
+                var worker = new TransformWorker<Chunk, Stream>(chunks, streams, x => x.ToCompressedStream());
                 worker.Start();
                 workers.Add(worker);
             }

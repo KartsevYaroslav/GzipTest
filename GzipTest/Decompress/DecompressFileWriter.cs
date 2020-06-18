@@ -8,12 +8,11 @@ namespace GzipTest.Decompress
     {
         private readonly string fileName;
         private readonly long fileSize;
-        private readonly int concurrency;
-        private BlockingBag<Chunk>? queue;
+        private readonly uint concurrency;
         private readonly List<DecompressWriteWorker> workers;
         private MemoryMappedFile? memoryMappedFile;
 
-        public DecompressFileWriter(string fileName, long fileSize, int concurrency)
+        public DecompressFileWriter(string fileName, long fileSize, uint concurrency)
         {
             this.fileName = fileName;
             this.fileSize = fileSize;
@@ -25,7 +24,7 @@ namespace GzipTest.Decompress
         {
             memoryMappedFile = MemoryMappedFile.CreateFromFile(fileName, FileMode.Open, null, fileSize,
                 MemoryMappedFileAccess.ReadWrite);
-            queue = bag;
+            var queue = bag;
             for (var i = 0; i < concurrency; i++)
             {
                 var worker = new DecompressWriteWorker(memoryMappedFile, queue);
@@ -45,7 +44,6 @@ namespace GzipTest.Decompress
         public void Dispose()
         {
             memoryMappedFile?.Dispose();
-            queue?.Dispose();
         }
     }
 }

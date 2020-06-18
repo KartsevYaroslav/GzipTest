@@ -16,37 +16,22 @@ namespace GzipTest.Decompress
             thread = new Thread(Write);
         }
 
-        public void Start()
-        {
-            thread.Start();
-        }
+        public void Start() => thread.Start();
 
-        public void Wait()
-        {
-            thread.Join();
-        }
+        public void Wait() => thread.Join();
 
         private void Write()
         {
-            var spinWait = new SpinWait();
-            while (true)
+            while (chunks.TryTake(out var chunk))
             {
-                if (chunks.IsAddingCompleted && chunks.Count == 0)
-                    break;
-
-                if (!chunks.TryTake(out var chunk))
-                {
-                    spinWait.SpinOnce();
-                    continue;
-                }
-
-                spinWait = new SpinWait();
-
-                using var viewStream = memoryMappedFile.CreateViewStream(chunk.InitialOffset, chunk.Content.Length,
-                    MemoryMappedFileAccess.ReadWrite);
+                using var viewStream = memoryMappedFile.CreateViewStream(
+                    chunk.InitialOffset,
+                    chunk.Content.Length,
+                    MemoryMappedFileAccess.ReadWrite
+                    );
+                
                 chunk.Content.CopyTo(viewStream);
                 chunk.Content.Dispose();
-                viewStream.Dispose();
             }
         }
     }

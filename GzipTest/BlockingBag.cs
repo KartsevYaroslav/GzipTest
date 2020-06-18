@@ -10,22 +10,27 @@ namespace GzipTest
         private readonly LinkedList<T> buffer;
         private readonly object lockObj;
         private int isCompleted;
-        private readonly Semaphore semaphore;
+        private readonly Semaphore addLimiter;
+        private readonly Bounder takeLimiter;
 
         public BlockingBag(int capacity)
         {
             buffer = new LinkedList<T>();
             lockObj = new object();
-            semaphore = new Semaphore(capacity, capacity);
+            addLimiter = new Semaphore(capacity, capacity);
+            takeLimiter = new Bounder(capacity);
         }
 
         public bool TryTake(out T value)
         {
             value = default!;
 
+            if (!IsAddingCompleted)
+                takeLimiter.WaitOne();
+
             lock (lockObj)
             {
-                if (Count == 0)
+                if (IsAddingCompleted && buffer.Count == 0)
                     return false;
 
                 if (buffer.First == null)
@@ -33,26 +38,28 @@ namespace GzipTest
 
                 value = buffer.First.Value;
                 buffer.RemoveFirst();
-                semaphore.Release();
+                addLimiter.Release();
                 return true;
             }
         }
 
         public void Add(T value)
         {
-            semaphore.WaitOne();
+            addLimiter.WaitOne();
             lock (lockObj)
             {
                 buffer.AddLast(value);
             }
+            takeLimiter.ReleaseOne();
         }
 
         public void CompleteAdding()
         {
-            isCompleted = 1;
+            takeLimiter.ReleaseAll();
+            Interlocked.CompareExchange(ref isCompleted, 1, 0);
         }
 
-        public bool IsAddingCompleted => isCompleted == 1;
+        public bool IsAddingCompleted => Interlocked.CompareExchange(ref isCompleted, 0, 0) != 0;
         public int Count => GetCount();
 
         private int GetCount()
@@ -65,7 +72,8 @@ namespace GzipTest
 
         public void Dispose()
         {
-            semaphore.Dispose();
+            addLimiter.Dispose();
+            takeLimiter.Dispose();
             foreach (var element in buffer)
             {
                 element.Dispose();
