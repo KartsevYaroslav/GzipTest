@@ -12,7 +12,7 @@ namespace Benchmark
         {
         }
 
-        public void StartConsuming(BlockingBag<Stream> bag)
+        public void StartConsuming(BlockingQueue<Stream> consumingQueue)
         {
             throw new NotImplementedException();
         }

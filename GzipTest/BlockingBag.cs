@@ -4,37 +4,36 @@ using System.Threading;
 
 namespace GzipTest
 {
-    public class BlockingBag<T> : IDisposable
-        where T : IDisposable
+    public class BlockingQueue<T> : IDisposable
     {
         private readonly LinkedList<T> buffer;
         private readonly object lockObj;
-        private int isCompleted;
-        private readonly Semaphore addLimiter;
+        private AtomicBool IsAddingComplete => takeLimiter.IsRealised;
+        private readonly SemaphoreSlim addLimiter;
         private readonly Bounder takeLimiter;
 
-        public BlockingBag(int capacity)
+        public BlockingQueue(uint capacity)
         {
             buffer = new LinkedList<T>();
             lockObj = new object();
-            addLimiter = new Semaphore(capacity, capacity);
-            takeLimiter = new Bounder(capacity);
+            addLimiter = new SemaphoreSlim((int) capacity, (int) capacity);
+            takeLimiter = new Bounder((int) capacity);
         }
 
         public bool TryTake(out T value)
         {
             value = default!;
 
-            if (!IsAddingCompleted)
+            if (!IsAddingComplete)
                 takeLimiter.WaitOne();
 
             lock (lockObj)
             {
-                if (IsAddingCompleted && buffer.Count == 0)
+                if (IsAddingComplete && buffer.Count == 0)
                     return false;
 
                 if (buffer.First == null)
-                    throw new InvalidOperationException("");
+                    throw new InvalidOperationException("Cannot deque value, node is null");
 
                 value = buffer.First.Value;
                 buffer.RemoveFirst();
@@ -45,39 +44,24 @@ namespace GzipTest
 
         public void Add(T value)
         {
-            addLimiter.WaitOne();
+            addLimiter.Wait();
             lock (lockObj)
             {
                 buffer.AddLast(value);
             }
+
             takeLimiter.ReleaseOne();
         }
 
         public void CompleteAdding()
         {
             takeLimiter.ReleaseAll();
-            Interlocked.CompareExchange(ref isCompleted, 1, 0);
-        }
-
-        public bool IsAddingCompleted => Interlocked.CompareExchange(ref isCompleted, 0, 0) != 0;
-        public int Count => GetCount();
-
-        private int GetCount()
-        {
-            lock (lockObj)
-            {
-                return buffer.Count;
-            }
         }
 
         public void Dispose()
         {
             addLimiter.Dispose();
             takeLimiter.Dispose();
-            foreach (var element in buffer)
-            {
-                element.Dispose();
-            }
         }
     }
 }

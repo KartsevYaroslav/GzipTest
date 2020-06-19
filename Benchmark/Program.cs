@@ -19,13 +19,13 @@ namespace Benchmark
         private const string FileToUnzip = Prefix + "enwik8_tmp.gz";
         private const string UnzipFile = Prefix + "enwik8_tmp.txt";
 
-        [Benchmark]
-        public void CompressReadAndWrite()
-        {
-            using var compressor = Gzip.Processor(CompressionMode.Compress, FileToZip, ZipFile);
-        
-            compressor.Process();
-        }
+        // [Benchmark]
+        // public void CompressReadAndWrite()
+        // {
+        //     using var compressor = Gzip.Processor(CompressionMode.Compress, FileToZip, ZipFile);
+        //
+        //     compressor.Process();
+        // }
 
         [Benchmark]
         public void DecompressReadAndWrite()

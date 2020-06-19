@@ -3,16 +3,16 @@ using System.Threading;
 
 namespace GzipTest
 {
-    public class Bounder: IDisposable
+    public class Bounder : IDisposable
     {
         private readonly int capacity;
-        private int free;
+        private volatile int free;
         private readonly SemaphoreSlim semaphoreSlim;
-        private readonly AtomicBool isRealised;
+        public AtomicBool IsRealised { get; }
 
         public Bounder(int capacity)
         {
-            isRealised = new AtomicBool(false);
+            IsRealised = new AtomicBool(false);
             this.capacity = capacity;
             free = 0;
             semaphoreSlim = new SemaphoreSlim(0, capacity);
@@ -29,16 +29,14 @@ namespace GzipTest
         {
             CheckReleased();
 
-            semaphoreSlim.Release();
             Interlocked.Increment(ref free);
+            semaphoreSlim.Release();
         }
 
         public void ReleaseAll()
         {
             CheckReleased();
-            var spinner = new SpinWait();
-            while (!isRealised.TrySet(true)) 
-                spinner.SpinOnce();
+            IsRealised.Set(true);
 
             var locked = capacity - free;
             if (locked > 0)
@@ -47,7 +45,7 @@ namespace GzipTest
 
         private void CheckReleased()
         {
-            if (isRealised)
+            if (IsRealised)
                 throw new InvalidOperationException("Bounder already released");
         }
 

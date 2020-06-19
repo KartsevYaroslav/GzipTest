@@ -8,18 +8,18 @@ namespace GzipTest.Decompress
     public class DecompressFileReader : IProducer<Stream>
     {
         private readonly string fileName;
-        private readonly BlockingBag<Stream> queue;
+        private readonly BlockingQueue<Stream> queue;
         private readonly Thread thread;
 
         public DecompressFileReader(string fileName)
         {
             this.fileName = fileName;
-            queue = new BlockingBag<Stream>(8);
+            queue = new BlockingQueue<Stream>(8);
 
             thread = new Thread(ReadFile);
         }
 
-        public BlockingBag<Stream> StartProducing()
+        public BlockingQueue<Stream> StartProducing()
         {
             thread.Start();
             return queue;
@@ -48,8 +48,8 @@ namespace GzipTest.Decompress
 
                 var size = BitConverter.ToInt32(sizeBuffer);
                 var viewStream = memoryMappedFile.CreateViewStream(offset + 4, size + 8);
-                queue.Add(viewStream);
                 offset += viewStream.Length + 4;
+                queue.Add(viewStream);
             }
 
             queue.CompleteAdding();

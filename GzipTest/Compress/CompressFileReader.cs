@@ -8,20 +8,20 @@ namespace GzipTest.Compress
     public class CompressFileReader : IProducer<Chunk>
     {
         private readonly string fileName;
-        private readonly BlockingBag<Chunk> queue;
+        private readonly BlockingQueue<Chunk> queue;
         private readonly Thread thread;
         private readonly MemoryMappedFile memoryMappedFile;
 
         public CompressFileReader(string fileName)
         {
             this.fileName = fileName;
-            queue = new BlockingBag<Chunk>(8);
+            queue = new BlockingQueue<Chunk>(8);
             memoryMappedFile = MemoryMappedFile.CreateFromFile(fileName, FileMode.Open, null);
 
             thread = new Thread(ReadFile);
         }
 
-        public BlockingBag<Chunk> StartProducing()
+        public BlockingQueue<Chunk> StartProducing()
         {
             thread.Start();
             return queue;
@@ -44,8 +44,8 @@ namespace GzipTest.Compress
                 var size = Math.Min(fileInfo.Length - offset, batchSize);
                 var viewStream = memoryMappedFile.CreateViewStream(offset, size);
                 var chunk = new Chunk(offset, viewStream);
-                queue.Add(chunk);
                 offset += viewStream.Length;
+                queue.Add(chunk);
             }
 
             queue.CompleteAdding();

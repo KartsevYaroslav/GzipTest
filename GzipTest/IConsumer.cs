@@ -8,7 +8,7 @@ namespace GzipTest
     public interface IConsumer<T> : IDisposable
         where T : IDisposable
     {
-        void StartConsuming(BlockingBag<T> bag);
+        void StartConsuming(BlockingQueue<T> consumingQueue);
         void Wait();
     }
 }

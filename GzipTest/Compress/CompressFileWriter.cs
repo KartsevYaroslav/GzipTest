@@ -1,4 +1,5 @@
-﻿using System.IO;
+﻿using System;
+using System.IO;
 using System.Threading;
 
 namespace GzipTest.Compress
@@ -6,7 +7,7 @@ namespace GzipTest.Compress
     public class CompressFileWriter : IConsumer<Stream>
     {
         private readonly string fileName;
-        private BlockingBag<Stream>? queue;
+        private BlockingQueue<Stream>? producingBag;
         private readonly Thread thread;
 
         public CompressFileWriter(string fileName)
@@ -15,9 +16,9 @@ namespace GzipTest.Compress
             thread = new Thread(Write);
         }
 
-        public void StartConsuming(BlockingBag<Stream> bag)
+        public void StartConsuming(BlockingQueue<Stream> consumingQueue)
         {
-            queue = bag;
+            producingBag = consumingQueue;
             thread.Start();
         }
 
@@ -28,23 +29,12 @@ namespace GzipTest.Compress
 
         private void Write()
         {
+            producingBag = producingBag ?? throw new ArgumentNullException(nameof(producingBag));
             using var fileStream = File.Open(fileName, FileMode.Open, FileAccess.Write);
 
-            var spinWait = new SpinWait();
             fileStream.Position += 8;
-            while (true)
+            while (producingBag.TryTake(out var stream))
             {
-                if (queue.IsAddingCompleted && queue.Count == 0)
-                    break;
-
-                if (!queue.TryTake(out var stream))
-                {
-                    spinWait.SpinOnce();
-                    continue;
-                }
-
-                spinWait = new SpinWait();
-
                 stream.CopyTo(fileStream);
             }
         }

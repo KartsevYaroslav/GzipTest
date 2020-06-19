@@ -15,7 +15,7 @@ namespace GzipTest
                 throw new ArgumentException("Incorrect arguments");
 
             if (!File.Exists(args[1]))
-                throw new ArgumentException("incorrect source file name");
+                throw new ArgumentException($"incorrect source file name {args[1]}");
 
             if (File.Exists(args[2]))
                 File.Delete(args[2]);

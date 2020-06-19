@@ -1,24 +1,28 @@
-﻿using System.Collections.Generic;
-using System.IO;
+﻿using System;
+using System.Collections.Generic;
 
-namespace GzipTest.Compress
+namespace GzipTest
 {
-    public class Compressor : IProcessor
+    public class Processor<TIn, TOut> : IProcessor
+        where TOut : IDisposable
+        where TIn : IDisposable
     {
-        private readonly IProducer<Chunk> producer;
-        private readonly IConsumer<Stream> consumer;
+        private readonly IProducer<TIn> producer;
+        private readonly IConsumer<TOut> consumer;
         private readonly uint concurrency;
-        private readonly List<TransformWorker<Chunk, Stream>> workers;
-        private readonly BlockingBag<Stream> streams;
-        private BlockingBag<Chunk>? chunks;
+        private readonly List<TransformWorker<TIn, TOut>> workers;
+        private readonly BlockingQueue<TOut> streams;
+        private BlockingQueue<TIn>? chunks;
+        private readonly Func<TIn, TOut> mapper;
 
-        public Compressor(IProducer<Chunk> producer, IConsumer<Stream> consumer, uint concurrency)
+        public Processor(IProducer<TIn> producer, IConsumer<TOut> consumer, Func<TIn, TOut> mapper, uint concurrency)
         {
             this.producer = producer;
             this.consumer = consumer;
             this.concurrency = concurrency;
-            workers = new List<TransformWorker<Chunk, Stream>>();
-            streams = new BlockingBag<Stream>(8);
+            this.mapper = mapper;
+            workers = new List<TransformWorker<TIn, TOut>>();
+            streams = new BlockingQueue<TOut>(concurrency);
         }
 
         public void Process()
@@ -33,7 +37,7 @@ namespace GzipTest.Compress
             consumer.StartConsuming(streams);
             for (var i = 0; i < concurrency; i++)
             {
-                var worker = new TransformWorker<Chunk, Stream>(chunks, streams, x => x.ToCompressedStream());
+                var worker = new TransformWorker<TIn, TOut>(chunks, streams, mapper);
                 worker.Start();
                 workers.Add(worker);
             }
@@ -54,6 +58,7 @@ namespace GzipTest.Compress
         public void Dispose()
         {
             producer.Dispose();
+            consumer.Dispose();
             streams.Dispose();
             chunks?.Dispose();
         }

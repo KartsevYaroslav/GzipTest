@@ -17,10 +17,10 @@ namespace Benchmark
             this.chunksCount = chunksCount;
         }
 
-        public BlockingBag<Chunk> StartProducing()
+        public BlockingQueue<Chunk> StartProducing()
         {
             var random = new Random();
-            var queue = new BlockingBag<Chunk>(8);
+            var queue = new BlockingQueue<Chunk>(8);
             for (var i = 0; i < chunksCount; i++)
             {
                 var bytes = new byte[chunkSize];

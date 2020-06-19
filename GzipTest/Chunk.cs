@@ -23,7 +23,7 @@ namespace GzipTest
 
             var memoryStream = new MemoryStream(1024 * 80);
             using var gZipStream = new GZipStream(stream, CompressionMode.Decompress);
-            gZipStream.CopyTo(memoryStream);
+            gZipStream.CopyTo(memoryStream, 1024 * 40);
             stream.Dispose();
             gZipStream.Close();
             memoryStream.Position = 0;

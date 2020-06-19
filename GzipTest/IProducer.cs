@@ -5,7 +5,7 @@ namespace GzipTest
     public interface IProducer<T> : IDisposable 
         where T : IDisposable
     {
-        BlockingBag<T> StartProducing();
+        BlockingQueue<T> StartProducing();
         void Wait();
     }
 }

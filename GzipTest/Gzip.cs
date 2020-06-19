@@ -34,7 +34,7 @@ namespace GzipTest
 
             var fileWriter = new CompressFileWriter(outputFileName);
             var reader = new CompressFileReader(inputFileName);
-            return new Compressor(reader, fileWriter, concurrency);
+            return new Processor<Chunk, Stream>(reader, fileWriter, x => x.ToCompressedStream(), concurrency);
         }
 
         private static IProcessor CreateDecompressor(string inputFileName, string outputFileName, uint concurrency)
@@ -48,7 +48,7 @@ namespace GzipTest
 
             var reader = new DecompressFileReader(inputFileName);
             var decompressWriter = new DecompressFileWriter(outputFileName, fileSize, concurrency);
-            return new Decompressor(reader, decompressWriter, concurrency);
+            return new Processor<Stream, Chunk>(reader, decompressWriter, Chunk.FromCompressedStream, concurrency);
         }
     }
 }
