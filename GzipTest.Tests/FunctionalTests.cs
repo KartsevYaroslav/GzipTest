@@ -32,12 +32,12 @@ namespace GzipTest.Tests
         [Test]
         public void Should_compress_and_decompress()
         {
-            using (var compressor = Gzip.Processor(CompressionMode.Compress, FileToZip, ZipFile))
+            using (var compressor = Gzip.Gzip.Processor(CompressionMode.Compress, FileToZip, ZipFile))
             {
                 compressor.Process();
             }
 
-            using (var decompressor = Gzip.Processor(CompressionMode.Decompress, ZipFile, UnzipFile))
+            using (var decompressor = Gzip.Gzip.Processor(CompressionMode.Decompress, ZipFile, UnzipFile))
             {
                 decompressor.Process();
             }

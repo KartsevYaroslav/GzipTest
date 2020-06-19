@@ -1,6 +1,6 @@
 ﻿using System.Threading;
 
-namespace GzipTest
+namespace GzipTest.Infrastructure
 {
     public static class Extensions
     {

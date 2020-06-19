@@ -20,7 +20,7 @@ namespace GzipTest
             if (File.Exists(args[2]))
                 File.Delete(args[2]);
 
-            var worker = Gzip.Processor(mode, args[1], args[2]);
+            var worker = Gzip.Gzip.Processor(mode, args[1], args[2]);
             worker.Process();
             stopwatch.Stop();
             Console.WriteLine($"elapsed {stopwatch.ElapsedMilliseconds}");

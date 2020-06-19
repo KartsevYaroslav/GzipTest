@@ -1,81 +1,32 @@
 ﻿using System;
-using System.Buffers;
-using System.Collections.Generic;
 using System.IO;
 using System.IO.MemoryMappedFiles;
 using System.Threading;
+using GzipTest.Gzip;
+using GzipTest.Infrastructure;
+using GzipTest.Model;
 
 namespace GzipTest.Decompress
 {
-    public interface ITaskQueue
-    {
-        public void EnqueueTask(Action task);
-        public void WaitAll();
-    }
-
-    class TaskQueue : ITaskQueue
-    {
-        private List<Thread> threads;
-        private BlockingQueue<Action> actions;
-
-        public TaskQueue(int workersCount)
-        {
-            threads = new List<Thread>();
-            actions = new BlockingQueue<Action>((uint) workersCount);
-
-            for (var i = 0; i < workersCount; i++)
-            {
-                var thread = new Thread(Execute);
-                thread.Start();
-                threads.Add(thread);
-            }
-        }
-
-        private void Execute()
-        {
-            while (actions.TryTake(out var action))
-            {
-                action();
-            }
-        }
-
-        public void EnqueueTask(Action task)
-        {
-            actions.Add(task);
-        }
-
-        public void WaitAll()
-        {
-            actions.CompleteAdding();
-            foreach (var thread in threads)
-            {
-                thread.Join();
-            }
-        }
-    }
-
     public class DecompressFileWriter : IConsumer<Chunk>
     {
-        private readonly uint concurrency;
-        private ITaskQueue queue;
-        private MemoryMappedFile memoryMappedFile;
-        private BlockingQueue<byte[]> buffersPool;
-        private int count;
+        private readonly MemoryMappedFile memoryMappedFile;
+        private readonly BlockingBag<byte[]> buffersPool;
+        private volatile int count;
         private bool isDone;
-        private ManualResetEvent manualResetEvent;
+        private readonly ManualResetEvent manualResetEvent;
+        private readonly Worker worker;
 
-        public DecompressFileWriter(string fileName, long fileSize, uint concurrency)
+        public DecompressFileWriter(IThreadPool threadPool, string fileName, long fileSize, uint concurrency)
         {
-            this.concurrency = concurrency;
-            buffersPool = new BlockingQueue<byte[]>(concurrency);
+            buffersPool = new BlockingBag<byte[]>(concurrency);
             manualResetEvent = new ManualResetEvent(false);
+            worker = new Worker(threadPool);
 
             for (var i = 0; i < concurrency; i++)
             {
                 buffersPool.Add(new byte[1024 * 80]);
             }
-
-            queue = new TaskQueue((int) 2);
 
             memoryMappedFile = MemoryMappedFile.CreateFromFile(
                 fileName,
@@ -86,21 +37,21 @@ namespace GzipTest.Decompress
             );
         }
 
-        public void StartConsuming(BlockingQueue<Chunk> consumingQueue) =>
-            queue.EnqueueTask(() => Write(consumingQueue));
+        public void StartConsuming(IBlockingCollection<Chunk> consumingBag) => worker.Run(() => Write(consumingBag));
 
         public void Wait()
         {
+            worker.Wait();
             manualResetEvent.WaitOne();
-            queue.WaitAll();
         }
 
         public void Dispose()
         {
+            buffersPool.Dispose();
             memoryMappedFile.Dispose();
         }
 
-        private void Write(BlockingQueue<Chunk> chunks)
+        private void Write(IBlockingCollection<Chunk> chunks)
         {
             while (chunks.TryTake(out var chunk))
             {
@@ -116,7 +67,7 @@ namespace GzipTest.Decompress
                     x.Dispose();
                     y.Dispose();
                     Interlocked.Decrement(ref count);
-                    if (isDone && Interlocked.CompareExchange(ref count, 0, 0) == 0)
+                    if (isDone && count == 0)
                         manualResetEvent.Set();
                 });
             }
@@ -124,7 +75,7 @@ namespace GzipTest.Decompress
             isDone = true;
         }
 
-        public void CopyStreamToStream(
+        private void CopyStreamToStream(
             Stream source, Stream destination,
             Action<Stream, Stream, Exception> completed)
         {

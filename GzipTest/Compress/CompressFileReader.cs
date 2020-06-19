@@ -1,37 +1,36 @@
 ﻿using System;
 using System.IO;
 using System.IO.MemoryMappedFiles;
-using System.Threading;
+using GzipTest.Decompress;
+using GzipTest.Gzip;
+using GzipTest.Infrastructure;
+using GzipTest.Model;
 
 namespace GzipTest.Compress
 {
-    public class CompressFileReader : IProducer<Chunk>
+    internal class CompressFileReader : IProducer<Chunk>
     {
         private readonly string fileName;
-        private readonly BlockingQueue<Chunk> queue;
-        private readonly Thread thread;
+        private readonly IBlockingCollection<Chunk> producingBag;
         private readonly MemoryMappedFile memoryMappedFile;
+        private readonly Worker worker;
 
-        public CompressFileReader(string fileName)
+        public CompressFileReader(string fileName, IThreadPool threadPool, uint concurrency)
         {
+            worker = new Worker(threadPool);
             this.fileName = fileName;
-            queue = new BlockingQueue<Chunk>(8);
+            producingBag = new DisposableBlockingBag<Chunk>(concurrency);
             memoryMappedFile = MemoryMappedFile.CreateFromFile(fileName, FileMode.Open, null);
-
-            thread = new Thread(ReadFile);
         }
 
-        public BlockingQueue<Chunk> StartProducing()
+        public IBlockingCollection<Chunk> StartProducing()
         {
-            thread.Start();
-            return queue;
+            worker.Run(ReadFile);
+            return producingBag;
         }
 
 
-        public void Wait()
-        {
-            thread.Join();
-        }
+        public void Wait() => worker.Wait();
 
         private void ReadFile()
         {
@@ -45,15 +44,12 @@ namespace GzipTest.Compress
                 var viewStream = memoryMappedFile.CreateViewStream(offset, size);
                 var chunk = new Chunk(offset, viewStream);
                 offset += viewStream.Length;
-                queue.Add(chunk);
+                producingBag.Add(chunk);
             }
 
-            queue.CompleteAdding();
+            producingBag.CompleteAdding();
         }
 
-        public void Dispose()
-        {
-            memoryMappedFile?.Dispose();
-        }
+        public void Dispose() => memoryMappedFile?.Dispose();
     }
 }

@@ -3,8 +3,10 @@ using System.IO;
 using System.IO.Compression;
 using GzipTest.Compress;
 using GzipTest.Decompress;
+using GzipTest.Infrastructure;
+using GzipTest.Model;
 
-namespace GzipTest
+namespace GzipTest.Gzip
 {
     public static class Gzip
     {
@@ -32,9 +34,15 @@ namespace GzipTest
             fileStream.Write(sizeBytes);
             fileStream.Dispose();
 
-            var fileWriter = new CompressFileWriter(outputFileName);
-            var reader = new CompressFileReader(inputFileName);
-            return new Processor<Chunk, Stream>(reader, fileWriter, x => x.ToCompressedStream(), concurrency);
+            var threadPool = new BackgroundThreadPool(concurrency + 2);
+            var fileWriter = new CompressFileWriter(outputFileName, threadPool);
+            var reader = new CompressFileReader(inputFileName, threadPool, concurrency);
+            return new Processor<Chunk, Stream>(
+                reader,
+                fileWriter,
+                threadPool,
+                x => x.ToCompressedStream(),
+                concurrency);
         }
 
         private static IProcessor CreateDecompressor(string inputFileName, string outputFileName, uint concurrency)
@@ -46,9 +54,15 @@ namespace GzipTest
             var fileSize = BitConverter.ToInt64(buffer);
             File.Create(outputFileName).Dispose();
 
-            var reader = new DecompressFileReader(inputFileName);
-            var decompressWriter = new DecompressFileWriter(outputFileName, fileSize, concurrency);
-            return new Processor<Stream, Chunk>(reader, decompressWriter, Chunk.FromCompressedStream, concurrency);
+            var threadPool = new BackgroundThreadPool(concurrency + 1);
+            var reader = new DecompressFileReader(inputFileName, threadPool, concurrency);
+            var decompressWriter = new DecompressFileWriter(threadPool, outputFileName, fileSize, concurrency * 2);
+            return new Processor<Stream, Chunk>(
+                reader,
+                decompressWriter,
+                threadPool,
+                Chunk.FromCompressedStream,
+                concurrency);
         }
     }
 }

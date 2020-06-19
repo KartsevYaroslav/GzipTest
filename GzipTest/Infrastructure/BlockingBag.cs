@@ -1,10 +1,11 @@
 ﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Threading;
 
-namespace GzipTest
+namespace GzipTest.Infrastructure
 {
-    public class BlockingQueue<T> : IDisposable
+    public class BlockingBag<T> : IBlockingCollection<T>, IEnumerable<T>
     {
         private readonly LinkedList<T> buffer;
         private readonly object lockObj;
@@ -12,7 +13,7 @@ namespace GzipTest
         private readonly SemaphoreSlim addLimiter;
         private readonly Bounder takeLimiter;
 
-        public BlockingQueue(uint capacity)
+        public BlockingBag(uint capacity)
         {
             buffer = new LinkedList<T>();
             lockObj = new object();
@@ -60,8 +61,21 @@ namespace GzipTest
 
         public void Dispose()
         {
+            if (!IsAddingComplete)
+                CompleteAdding();
+
             addLimiter.Dispose();
             takeLimiter.Dispose();
         }
+
+        public IEnumerator<T> GetEnumerator()
+        {
+            lock (buffer)
+            {
+                return buffer.GetEnumerator();
+            }
+        }
+
+        IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
     }
 }

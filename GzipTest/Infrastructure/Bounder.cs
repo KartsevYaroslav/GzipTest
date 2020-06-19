@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Threading;
 
-namespace GzipTest
+namespace GzipTest.Infrastructure
 {
     public class Bounder : IDisposable
     {

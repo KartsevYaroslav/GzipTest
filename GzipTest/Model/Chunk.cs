@@ -2,7 +2,7 @@
 using System.IO;
 using System.IO.Compression;
 
-namespace GzipTest
+namespace GzipTest.Model
 {
     public class Chunk : IDisposable
     {
@@ -23,7 +23,7 @@ namespace GzipTest
 
             var memoryStream = new MemoryStream(1024 * 80);
             using var gZipStream = new GZipStream(stream, CompressionMode.Decompress);
-            gZipStream.CopyTo(memoryStream, 1024 * 40);
+            gZipStream.CopyTo(memoryStream);
             stream.Dispose();
             gZipStream.Close();
             memoryStream.Position = 0;

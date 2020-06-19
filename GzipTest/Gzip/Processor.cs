@@ -1,7 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
+using GzipTest.Infrastructure;
 
-namespace GzipTest
+namespace GzipTest.Gzip
 {
     public class Processor<TIn, TOut> : IProcessor
         where TOut : IDisposable
@@ -9,20 +10,27 @@ namespace GzipTest
     {
         private readonly IProducer<TIn> producer;
         private readonly IConsumer<TOut> consumer;
-        private readonly uint concurrency;
-        private readonly List<TransformWorker<TIn, TOut>> workers;
-        private readonly BlockingQueue<TOut> streams;
-        private BlockingQueue<TIn>? chunks;
+        private readonly IBlockingCollection<TOut> streams;
+        private IBlockingCollection<TIn>? chunks;
         private readonly Func<TIn, TOut> mapper;
+        private readonly IThreadPool threadPool;
+        private readonly List<ITask> tasks;
+        private readonly uint concurrency;
 
-        public Processor(IProducer<TIn> producer, IConsumer<TOut> consumer, Func<TIn, TOut> mapper, uint concurrency)
+        public Processor(
+            IProducer<TIn> producer,
+            IConsumer<TOut> consumer,
+            IThreadPool threadPool,
+            Func<TIn, TOut> mapper,
+            uint concurrency)
         {
             this.producer = producer;
             this.consumer = consumer;
             this.concurrency = concurrency;
+            this.threadPool = threadPool;
             this.mapper = mapper;
-            workers = new List<TransformWorker<TIn, TOut>>();
-            streams = new BlockingQueue<TOut>(concurrency);
+            streams = new DisposableBlockingBag<TOut>(concurrency);
+            tasks = new List<ITask>();
         }
 
         public void Process()
@@ -35,22 +43,24 @@ namespace GzipTest
         {
             chunks = producer.StartProducing();
             consumer.StartConsuming(streams);
+
             for (var i = 0; i < concurrency; i++)
             {
-                var worker = new TransformWorker<TIn, TOut>(chunks, streams, mapper);
-                worker.Start();
-                workers.Add(worker);
+                var task = new Task(() =>
+                {
+                    while (chunks.TryTake(out var chunk))
+                        streams.Add(mapper(chunk));
+                });
+
+                tasks.Add(task);
+                threadPool.RunTask(task);
             }
         }
 
         private void Wait()
         {
             producer.Wait();
-            foreach (var worker in workers)
-            {
-                worker.Wait();
-            }
-
+            threadPool.WaitAll(tasks);
             streams.CompleteAdding();
             consumer.Wait();
         }
@@ -60,7 +70,7 @@ namespace GzipTest
             producer.Dispose();
             consumer.Dispose();
             streams.Dispose();
-            chunks?.Dispose();
+            threadPool.Dispose();
         }
     }
 }

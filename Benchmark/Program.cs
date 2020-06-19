@@ -5,6 +5,7 @@ using BenchmarkDotNet.Attributes;
 using BenchmarkDotNet.Running;
 using GzipTest;
 using GzipTest.Compress;
+using GzipTest.Gzip;
 
 namespace Benchmark
 {
@@ -19,19 +20,19 @@ namespace Benchmark
         private const string FileToUnzip = Prefix + "enwik8_tmp.gz";
         private const string UnzipFile = Prefix + "enwik8_tmp.txt";
 
-        // [Benchmark]
-        // public void CompressReadAndWrite()
-        // {
-        //     using var compressor = Gzip.Processor(CompressionMode.Compress, FileToZip, ZipFile);
-        //
-        //     compressor.Process();
-        // }
+        [Benchmark]
+        public void CompressReadAndWrite()
+        {
+            using var compressor = Gzip.Processor(CompressionMode.Compress, FileToZip, ZipFile);
+        
+            compressor.Process();
+        }
 
         [Benchmark]
         public void DecompressReadAndWrite()
         {
             using var decompressor = Gzip.Processor(CompressionMode.Decompress, FileToUnzip, UnzipFile);
-
+        
             decompressor.Process();
         }
 
