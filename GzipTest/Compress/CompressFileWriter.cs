@@ -1,7 +1,6 @@
 ﻿using System.IO;
-using GzipTest.Decompress;
-using GzipTest.Gzip;
 using GzipTest.Infrastructure;
+using GzipTest.Processor;
 
 namespace GzipTest.Compress
 {

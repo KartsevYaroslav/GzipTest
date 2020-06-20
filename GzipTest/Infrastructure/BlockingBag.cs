@@ -9,7 +9,7 @@ namespace GzipTest.Infrastructure
     {
         private readonly LinkedList<T> buffer;
         private readonly object lockObj;
-        private AtomicBool IsAddingComplete => takeLimiter.IsRealised;
+        private bool IsAddingComplete => takeLimiter.IsRealised;
         private readonly SemaphoreSlim addLimiter;
         private readonly Bounder takeLimiter;
 
@@ -34,7 +34,7 @@ namespace GzipTest.Infrastructure
                     return false;
 
                 if (buffer.First == null)
-                    throw new InvalidOperationException("Cannot deque value, node is null");
+                    throw new InvalidOperationException("Cannot take value, node is null");
 
                 value = buffer.First.Value;
                 buffer.RemoveFirst();

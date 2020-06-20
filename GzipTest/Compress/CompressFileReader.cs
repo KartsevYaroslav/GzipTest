@@ -1,10 +1,9 @@
 ﻿using System;
 using System.IO;
 using System.IO.MemoryMappedFiles;
-using GzipTest.Decompress;
-using GzipTest.Gzip;
 using GzipTest.Infrastructure;
 using GzipTest.Model;
+using GzipTest.Processor;
 
 namespace GzipTest.Compress
 {
@@ -14,11 +13,13 @@ namespace GzipTest.Compress
         private readonly IBlockingCollection<Chunk> producingBag;
         private readonly MemoryMappedFile memoryMappedFile;
         private readonly Worker worker;
+        private readonly uint batchSize;
 
-        public CompressFileReader(string fileName, IThreadPool threadPool, uint concurrency)
+        public CompressFileReader(string fileName, uint batchSize, IThreadPool threadPool, uint concurrency)
         {
             worker = new Worker(threadPool);
             this.fileName = fileName;
+            this.batchSize = batchSize;
             producingBag = new DisposableBlockingBag<Chunk>(concurrency);
             memoryMappedFile = MemoryMappedFile.CreateFromFile(fileName, FileMode.Open, null);
         }
@@ -29,14 +30,12 @@ namespace GzipTest.Compress
             return producingBag;
         }
 
-
         public void Wait() => worker.Wait();
 
         private void ReadFile()
         {
             var fileInfo = new FileInfo(fileName);
 
-            const int batchSize = 1024 * 80;
             var offset = 0L;
             while (offset < fileInfo.Length)
             {
@@ -50,6 +49,6 @@ namespace GzipTest.Compress
             producingBag.CompleteAdding();
         }
 
-        public void Dispose() => memoryMappedFile?.Dispose();
+        public void Dispose() => memoryMappedFile.Dispose();
     }
 }

@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Threading;
 
 namespace GzipTest.Infrastructure
@@ -22,6 +23,9 @@ namespace GzipTest.Infrastructure
 
         public void RunTask(ITask task)
         {
+            if (waitHandlerByTask.ContainsKey(task))
+                throw new ArgumentException("Task already running");
+
             waitHandlerByTask[task] = new ManualResetEvent(false);
             tasks.Add(task);
         }
@@ -30,7 +34,10 @@ namespace GzipTest.Infrastructure
         {
             foreach (var task in waitedTasks)
             {
-                waitHandlerByTask[task].WaitOne();
+                if (!waitHandlerByTask.TryGetValue(task, out var waitHandler))
+                    throw new ArgumentException("Task not running in the pool");
+
+                waitHandler.WaitOne();
                 waitHandlerByTask.Remove(task);
             }
         }

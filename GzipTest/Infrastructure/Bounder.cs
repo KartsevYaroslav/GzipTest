@@ -8,14 +8,15 @@ namespace GzipTest.Infrastructure
         private readonly int capacity;
         private volatile int free;
         private readonly SemaphoreSlim semaphoreSlim;
-        public AtomicBool IsRealised { get; }
+        private readonly object lockObj;
+        public bool IsRealised { get; private set; }
 
         public Bounder(int capacity)
         {
-            IsRealised = new AtomicBool(false);
             this.capacity = capacity;
             free = 0;
             semaphoreSlim = new SemaphoreSlim(0, capacity);
+            lockObj = new object();
         }
 
         public void WaitOne()
@@ -27,18 +28,25 @@ namespace GzipTest.Infrastructure
 
         public void ReleaseOne()
         {
-            CheckReleased();
+            lock (lockObj)
+            {
+                CheckReleased();
+                Interlocked.Increment(ref free);
+            }
 
-            Interlocked.Increment(ref free);
             semaphoreSlim.Release();
         }
 
         public void ReleaseAll()
         {
-            CheckReleased();
-            IsRealised.Set(true);
+            int locked;
+            lock (lockObj)
+            {
+                CheckReleased();
+                IsRealised = true;
+                locked = capacity - free;
+            }
 
-            var locked = capacity - free;
             if (locked > 0)
                 semaphoreSlim.Release(locked);
         }
@@ -49,9 +57,6 @@ namespace GzipTest.Infrastructure
                 throw new InvalidOperationException("Bounder already released");
         }
 
-        public void Dispose()
-        {
-            semaphoreSlim.Dispose();
-        }
+        public void Dispose() => semaphoreSlim.Dispose();
     }
 }

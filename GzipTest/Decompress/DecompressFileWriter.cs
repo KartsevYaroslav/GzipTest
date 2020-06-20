@@ -1,10 +1,9 @@
-﻿using System;
-using System.IO;
+﻿using System.IO;
 using System.IO.MemoryMappedFiles;
 using System.Threading;
-using GzipTest.Gzip;
 using GzipTest.Infrastructure;
 using GzipTest.Model;
+using GzipTest.Processor;
 
 namespace GzipTest.Decompress
 {
@@ -12,22 +11,21 @@ namespace GzipTest.Decompress
     {
         private readonly MemoryMappedFile memoryMappedFile;
         private readonly BlockingBag<byte[]> buffersPool;
-        private volatile int count;
+        private volatile int writtenChunks;
         private bool isDone;
         private readonly ManualResetEvent manualResetEvent;
         private readonly Worker worker;
 
-        public DecompressFileWriter(IThreadPool threadPool, string fileName, long fileSize, uint concurrency)
+        public DecompressFileWriter(
+            IThreadPool threadPool,
+            string fileName,
+            long fileSize,
+            uint batchSize,
+            uint concurrency
+        )
         {
-            buffersPool = new BlockingBag<byte[]>(concurrency);
             manualResetEvent = new ManualResetEvent(false);
             worker = new Worker(threadPool);
-
-            for (var i = 0; i < concurrency; i++)
-            {
-                buffersPool.Add(new byte[1024 * 80]);
-            }
-
             memoryMappedFile = MemoryMappedFile.CreateFromFile(
                 fileName,
                 FileMode.Open,
@@ -35,6 +33,12 @@ namespace GzipTest.Decompress
                 fileSize,
                 MemoryMappedFileAccess.ReadWrite
             );
+
+            buffersPool = new BlockingBag<byte[]>(concurrency);
+            for (var i = 0; i < concurrency; i++)
+            {
+                buffersPool.Add(new byte[batchSize]);
+            }
         }
 
         public void StartConsuming(IBlockingCollection<Chunk> consumingBag) => worker.Run(() => Write(consumingBag));
@@ -55,59 +59,25 @@ namespace GzipTest.Decompress
         {
             while (chunks.TryTake(out var chunk))
             {
-                Interlocked.Increment(ref count);
+                Interlocked.Increment(ref writtenChunks);
                 var viewStream = memoryMappedFile.CreateViewStream(
                     chunk.InitialOffset,
                     chunk.Content.Length,
                     MemoryMappedFileAccess.ReadWrite
                 );
 
-                CopyStreamToStream(chunk.Content, viewStream, (x, y, z) =>
-                {
-                    x.Dispose();
-                    y.Dispose();
-                    Interlocked.Decrement(ref count);
-                    if (isDone && count == 0)
-                        manualResetEvent.Set();
-                });
+                chunk.Content.CopyToAsync(viewStream, buffersPool, OnComplete);
             }
 
             isDone = true;
-        }
 
-        private void CopyStreamToStream(
-            Stream source, Stream destination,
-            Action<Stream, Stream, Exception> completed)
-        {
-            buffersPool.TryTake(out var buffer);
-
-            var read = source.Read(buffer);
-            try
+            void OnComplete(Stream source, Stream target)
             {
-                if (read > 0)
-                {
-                    destination.BeginWrite(buffer, 0, read, writeResult =>
-                    {
-                        try
-                        {
-                            destination.EndWrite(writeResult);
-                            buffersPool.Add(buffer);
-                            completed(source, destination, null);
-                        }
-                        catch (Exception exc)
-                        {
-                            completed(source, destination, exc);
-                        }
-                    }, null);
-                }
-                else
-                {
-                    completed(source, destination, null);
-                }
-            }
-            catch (Exception exc)
-            {
-                completed(source, destination, exc);
+                source.Dispose();
+                target.Dispose();
+                Interlocked.Decrement(ref writtenChunks);
+                if (isDone && writtenChunks == 0)
+                    manualResetEvent.Set();
             }
         }
     }

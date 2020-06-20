@@ -1,7 +1,7 @@
 ﻿using System;
 using GzipTest.Infrastructure;
 
-namespace GzipTest.Gzip
+namespace GzipTest.Processor
 {
     public interface IProducer<T> : IDisposable 
     {

@@ -1,11 +1,13 @@
 ﻿using System;
 using System.IO;
-using System.IO.Compression;
+using GzipTest.Infrastructure;
 
 namespace GzipTest.Model
 {
     public class Chunk : IDisposable
     {
+        private const int DefaultBufferSize = 1024 * 1024;
+
         public Chunk(long initialOffset, Stream content)
         {
             InitialOffset = initialOffset;
@@ -17,44 +19,34 @@ namespace GzipTest.Model
 
         public static Chunk FromCompressedStream(Stream stream)
         {
-            Span<byte> buffer = stackalloc byte[8];
-            stream.Read(buffer);
-            var initialOffset = BitConverter.ToInt64(buffer);
+            var initialOffset = stream.ReadInt64();
 
-            var memoryStream = new MemoryStream(1024 * 80);
-            using var gZipStream = new GZipStream(stream, CompressionMode.Decompress);
-            gZipStream.CopyTo(memoryStream);
+            var memoryStream = new MemoryStream(DefaultBufferSize);
+            stream.DecompressGzipTo(memoryStream);
             stream.Dispose();
-            gZipStream.Close();
             memoryStream.Position = 0;
 
             return new Chunk(initialOffset, memoryStream);
         }
 
-        public Stream ToCompressedStream()
+        public Stream ToCompressedStreamWithSize()
         {
-            var memoryStream = new MemoryStream(1024 * 80);
+            const int headerLength = 12;
 
-            memoryStream.Position += 4;
-            var offsetBytes = BitConverter.GetBytes(InitialOffset);
-            memoryStream.Write(offsetBytes);
+            var memoryStream = new MemoryStream(checked((int) Content.Length));
+            memoryStream.Position += headerLength;
 
-            using var gZipStream = new GZipStream(memoryStream, CompressionLevel.Optimal, true);
-            Content.CopyTo(gZipStream);
-            gZipStream.Close();
+            Content.CompressGzipTo(memoryStream);
             Content.Dispose();
-
             memoryStream.Position = 0;
-            var chunkSize = BitConverter.GetBytes((int) memoryStream.Length - 12);
-            memoryStream.Write(chunkSize);
+
+            memoryStream.Write(checked((int) memoryStream.Length) - headerLength);
+            memoryStream.Write(InitialOffset);
             memoryStream.Position = 0;
 
             return memoryStream;
         }
 
-        public void Dispose()
-        {
-            Content.Dispose();
-        }
+        public void Dispose() => Content.Dispose();
     }
 }

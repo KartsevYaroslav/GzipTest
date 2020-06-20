@@ -1,7 +1,7 @@
 ﻿
 using System;
 
-namespace GzipTest.Gzip
+namespace GzipTest.Processor
 {
     public interface IProcessor : IDisposable
     {

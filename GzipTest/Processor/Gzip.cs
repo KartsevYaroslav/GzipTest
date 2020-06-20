@@ -6,63 +6,73 @@ using GzipTest.Decompress;
 using GzipTest.Infrastructure;
 using GzipTest.Model;
 
-namespace GzipTest.Gzip
+namespace GzipTest.Processor
 {
     public static class Gzip
     {
-        public static IProcessor Processor(
-            CompressionMode mode,
-            string inputFileName,
-            string outputFileName,
-            uint? concurrency = null
-        )
+        public static IProcessor Processor(UserArgs userArgs, uint? concurrency = null)
         {
             concurrency ??= (uint) Environment.ProcessorCount;
-            return mode switch
+            return userArgs.CompressionMode switch
             {
-                CompressionMode.Compress => CreateCompressor(inputFileName, outputFileName, concurrency.Value),
-                CompressionMode.Decompress => CreateDecompressor(inputFileName, outputFileName, concurrency.Value),
-                _ => throw new ArgumentException("Not supported mode")
+                CompressionMode.Compress => CreateCompressor(userArgs, concurrency.Value),
+                CompressionMode.Decompress => CreateDecompressor(userArgs, concurrency.Value),
+                _ => throw new ArgumentException($"Not supported mode '{userArgs.CompressionMode}'")
             };
         }
 
-        private static IProcessor CreateCompressor(string inputFileName, string outputFileName, uint concurrency)
+        private static IProcessor CreateCompressor(UserArgs userArgs, uint concurrency)
         {
-            var sourceFileInfo = new FileInfo(inputFileName);
-            var fileStream = File.Create(outputFileName);
-            var sizeBytes = BitConverter.GetBytes(sourceFileInfo.Length);
-            fileStream.Write(sizeBytes);
-            fileStream.Dispose();
+            WriteFileSize(userArgs.InputFileName, userArgs.OutputFileName);
 
             var threadPool = new BackgroundThreadPool(concurrency + 2);
-            var fileWriter = new CompressFileWriter(outputFileName, threadPool);
-            var reader = new CompressFileReader(inputFileName, threadPool, concurrency);
+            var fileWriter = new CompressFileWriter(userArgs.OutputFileName, threadPool);
+            var reader = new CompressFileReader(userArgs.InputFileName, userArgs.BatchSize, threadPool, concurrency);
             return new Processor<Chunk, Stream>(
                 reader,
                 fileWriter,
                 threadPool,
-                x => x.ToCompressedStream(),
+                x => x.ToCompressedStreamWithSize(),
                 concurrency);
         }
 
-        private static IProcessor CreateDecompressor(string inputFileName, string outputFileName, uint concurrency)
+        private static void WriteFileSize(string inputFileName, string outputFileName)
         {
-            var fileStream = File.Open(inputFileName, FileMode.Open);
-            Span<byte> buffer = stackalloc byte[8];
-            fileStream.Read(buffer);
+            var sourceFileInfo = new FileInfo(inputFileName);
+            var fileStream = File.Create(outputFileName);
+            fileStream.Write(sourceFileInfo.Length);
             fileStream.Dispose();
-            var fileSize = BitConverter.ToInt64(buffer);
-            File.Create(outputFileName).Dispose();
+        }
 
-            var threadPool = new BackgroundThreadPool(concurrency + 1);
-            var reader = new DecompressFileReader(inputFileName, threadPool, concurrency);
-            var decompressWriter = new DecompressFileWriter(threadPool, outputFileName, fileSize, concurrency * 2);
+        private static IProcessor CreateDecompressor(UserArgs userArgs, uint concurrency)
+        {
+            var fileSize = ReadFileSize(userArgs.InputFileName);
+            File.Create(userArgs.OutputFileName).Dispose();
+
+            var threadPool = new BackgroundThreadPool(concurrency + 2);
+            var reader = new DecompressFileReader(userArgs.InputFileName, threadPool, concurrency);
+            var decompressWriter = new DecompressFileWriter(
+                threadPool,
+                userArgs.OutputFileName,
+                fileSize,
+                userArgs.BatchSize,
+                concurrency * 2
+            );
+
             return new Processor<Stream, Chunk>(
                 reader,
                 decompressWriter,
                 threadPool,
                 Chunk.FromCompressedStream,
                 concurrency);
+        }
+
+        private static long ReadFileSize(string inputFileName)
+        {
+            var fileStream = File.Open(inputFileName, FileMode.Open);
+            var fileSize = fileStream.ReadInt64();
+            fileStream.Dispose();
+            return fileSize;
         }
     }
 }

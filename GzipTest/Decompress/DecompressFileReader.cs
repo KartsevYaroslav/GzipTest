@@ -1,8 +1,7 @@
-﻿using System;
-using System.IO;
+﻿using System.IO;
 using System.IO.MemoryMappedFiles;
-using GzipTest.Gzip;
 using GzipTest.Infrastructure;
+using GzipTest.Processor;
 
 namespace GzipTest.Decompress
 {
@@ -30,21 +29,20 @@ namespace GzipTest.Decompress
 
         private void ReadFile()
         {
+            const int chunkLengthSize = sizeof(int);
+            const int initialOffsetSize = sizeof(long);
+
             var fileInfo = new FileInfo(fileName);
             using var memoryMappedFile = MemoryMappedFile.CreateFromFile(fileName, FileMode.Open, null);
 
             var offset = 8L;
 
-            Span<byte> sizeBuffer = stackalloc byte[4];
             while (offset < fileInfo.Length)
             {
-                using (var tmpStream = memoryMappedFile.CreateViewStream(offset, 4))
-                {
-                    tmpStream.Read(sizeBuffer);
-                }
+                using var tmpStream = memoryMappedFile.CreateViewStream(offset, chunkLengthSize);
+                var chunkLength = tmpStream.ReadInt32();
 
-                var size = BitConverter.ToInt32(sizeBuffer);
-                var viewStream = memoryMappedFile.CreateViewStream(offset + 4, size + 8);
+                var viewStream = memoryMappedFile.CreateViewStream(offset + chunkLengthSize, chunkLength + initialOffsetSize);
                 offset += viewStream.Length + 4;
                 bag.Add(viewStream);
             }

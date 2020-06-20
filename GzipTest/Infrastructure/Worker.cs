@@ -6,24 +6,23 @@ namespace GzipTest.Infrastructure
     {
         private readonly IThreadPool threadPool;
         private Task? task;
-        private bool isStarted;
+        private bool IsStarted => task != null;
 
         public Worker(IThreadPool threadPool) => this.threadPool = threadPool;
 
         public void Run(Action action)
         {
-            if (isStarted)
-                throw new InvalidOperationException();
+            if (IsStarted)
+                throw new InvalidOperationException("Worker already started");
 
-            isStarted = true;
             task = new Task(action);
             threadPool.RunTask(task);
         }
 
         public void Wait()
         {
-            if (!isStarted)
-                throw new InvalidOperationException();
+            if (!IsStarted)
+                throw new InvalidOperationException("Worker not started yet");
 
             threadPool.WaitAll(new[] {task!});
         }
