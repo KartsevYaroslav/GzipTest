@@ -47,11 +47,11 @@ namespace GzipTest.Infrastructure
             return BitConverter.ToInt64(buffer);
         }
 
-        public static long ReadInt32(this Stream stream)
+        public static uint ReadUInt32(this Stream stream)
         {
             Span<byte> buffer = stackalloc byte[4];
             stream.Read(buffer);
-            return BitConverter.ToInt32(buffer);
+            return BitConverter.ToUInt32(buffer);
         }
 
         public static void Write(this Stream stream, long initialOffset)
@@ -60,7 +60,7 @@ namespace GzipTest.Infrastructure
             stream.Write(offsetBytes);
         }
 
-        public static void Write(this Stream stream, int value)
+        public static void Write(this Stream stream, uint value)
         {
             var chunkSize = BitConverter.GetBytes(value);
             stream.Write(chunkSize);

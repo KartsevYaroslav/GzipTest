@@ -40,7 +40,7 @@ namespace GzipTest.Model
             Content.Dispose();
             memoryStream.Position = 0;
 
-            memoryStream.Write(checked((int) memoryStream.Length) - headerLength);
+            memoryStream.Write(checked((uint) memoryStream.Length) - headerLength);
             memoryStream.Write(InitialOffset);
             memoryStream.Position = 0;
 

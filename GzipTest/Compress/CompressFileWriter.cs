@@ -8,10 +8,12 @@ namespace GzipTest.Compress
     {
         private readonly string fileName;
         private readonly Worker worker;
+        private readonly long fileHeaderSize;
 
-        public CompressFileWriter(string fileName, IThreadPool threadPool)
+        public CompressFileWriter(string fileName,long fileHeaderSize, IThreadPool threadPool)
         {
             this.fileName = fileName;
+            this.fileHeaderSize = fileHeaderSize;
             worker = new Worker(threadPool);
         }
 
@@ -23,7 +25,7 @@ namespace GzipTest.Compress
         {
             using var fileStream = File.Open(fileName, FileMode.Open, FileAccess.Write);
 
-            fileStream.Position += 8;
+            fileStream.Position += fileHeaderSize;
             while (producingBag.TryTake(out var stream))
                 stream.CopyTo(fileStream);
         }
