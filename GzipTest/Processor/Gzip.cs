@@ -10,7 +10,9 @@ namespace GzipTest.Processor
 {
     public static class Gzip
     {
-        private const int FileHeaderSize = 12;
+        public static readonly byte[] HeaderMagicNumber = {0x1f, 0x1f, 0x8b};
+
+        private const int FileHeaderSize = 15;
 
         public static IProcessor Processor(UserArgs userArgs, uint? concurrency = null)
         {
@@ -25,7 +27,7 @@ namespace GzipTest.Processor
 
         private static IProcessor CreateCompressor(UserArgs userArgs, uint concurrency)
         {
-            WriteFileSize(userArgs.InputFileName, userArgs.OutputFileName, userArgs.BatchSize / 1024);
+            WriteHeader(userArgs.InputFileName, userArgs.OutputFileName, userArgs.BatchSize / 1024);
 
             var threadPool = new BackgroundThreadPool(concurrency + 2);
             var fileWriter = new CompressFileWriter(userArgs.OutputFileName, FileHeaderSize, threadPool);
@@ -38,10 +40,11 @@ namespace GzipTest.Processor
                 concurrency);
         }
 
-        private static void WriteFileSize(string inputFileName, string outputFileName, uint chunkSize)
+        private static void WriteHeader(string inputFileName, string outputFileName, uint chunkSize)
         {
             var sourceFileInfo = new FileInfo(inputFileName);
             var fileStream = File.Create(outputFileName);
+            fileStream.Write(HeaderMagicNumber);
             fileStream.Write(sourceFileInfo.Length);
             fileStream.Write(chunkSize);
             fileStream.Dispose();
@@ -49,7 +52,7 @@ namespace GzipTest.Processor
 
         private static IProcessor CreateDecompressor(UserArgs userArgs, uint concurrency)
         {
-            var (fileSize, chunkSize) = ReadFileSize(userArgs.InputFileName);
+            var (fileSize, chunkSize) = ReadHeader(userArgs.InputFileName);
             File.Create(userArgs.OutputFileName).Dispose();
 
             var threadPool = new BackgroundThreadPool(concurrency + 2);
@@ -70,9 +73,10 @@ namespace GzipTest.Processor
                 concurrency);
         }
 
-        private static (long fileSize, uint chunkSize) ReadFileSize(string inputFileName)
+        private static (long fileSize, uint chunkSize) ReadHeader(string inputFileName)
         {
             var fileStream = File.Open(inputFileName, FileMode.Open);
+            fileStream.Position += HeaderMagicNumber.Length;
             var fileSize = fileStream.ReadInt64();
             var chunkSize = fileStream.ReadUInt32();
             fileStream.Dispose();

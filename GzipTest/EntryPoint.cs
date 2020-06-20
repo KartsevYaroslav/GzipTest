@@ -22,7 +22,7 @@ namespace GzipTest
                 processor.Process();
                 
                 stopwatch.Stop();
-                Console.WriteLine($"elapsed {stopwatch.ElapsedMilliseconds}");
+                Console.WriteLine($"Done. Elapsed {stopwatch.ElapsedMilliseconds} milliseconds");
             }
             catch (Exception e)
             {

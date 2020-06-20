@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.IO;
 using System.IO.Compression;
+using GzipTest.Processor;
 
 namespace GzipTest.Model
 {
@@ -14,6 +15,7 @@ namespace GzipTest.Model
                 Console.WriteLine(HelpMessage);
                 return null;
             }
+
             if (args.Length < 3)
             {
                 Console.WriteLine("Incorrect count of arguments. Should be '<mode> <input file> <output file>");
@@ -26,14 +28,13 @@ namespace GzipTest.Model
                 return null;
             }
 
-            if (!ValidateSourceFileName(args[1]))
+            if (!ValidateSourceFileName(args[1], mode))
                 return null;
 
             if (File.Exists(args[2]))
             {
-                File.Delete(args[2]);
-                // Console.WriteLine($"File already exists {args[2]}");
-                // return null;
+                Console.WriteLine($"File already exists '{args[2]}'");
+                return null;
             }
 
             uint? batchSize = null;
@@ -46,7 +47,7 @@ namespace GzipTest.Model
         private const string HelpMessage =
             "Usage:\n  GzipTest.exe [command] [input file name] [output file name] [options]\n\n" +
             "Commands:\n  compress\n  decompress\n  help\n\n" +
-            "Options:\n  -b [arg]\tblock size in kb. Default value 1024";
+            "Options:\n  -b [arg]\tblock size in kb. Default value 1024 (only for compress mode)";
 
         private static bool ValidateBatchSize(IReadOnlyList<string> batchSizeArgs, out uint? batchSize)
         {
@@ -64,17 +65,30 @@ namespace GzipTest.Model
             return true;
         }
 
-        private static bool ValidateSourceFileName(string fileName)
+        private static bool ValidateSourceFileName(string fileName, CompressionMode mode)
         {
             if (!File.Exists(fileName))
             {
-                Console.WriteLine($"Incorrect source file name {fileName}");
+                Console.WriteLine($"Incorrect source file name '{fileName}'");
                 return false;
             }
 
             try
             {
-                new FileStream(fileName, FileMode.Open, FileAccess.Read).Close();
+                var fileStream = new FileStream(fileName, FileMode.Open, FileAccess.Read);
+                if (mode == CompressionMode.Decompress)
+                {
+                    Span<byte> span = stackalloc byte[Gzip.HeaderMagicNumber.Length];
+                    fileStream.Read(span);
+                    if (!span.SequenceEqual(Gzip.HeaderMagicNumber))
+                    {
+                        Console.WriteLine("Unknown file format");
+                        fileStream.Close();
+                        return false;
+                    }
+                }
+
+                fileStream.Close();
             }
             catch (IOException)
             {
