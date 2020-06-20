@@ -1,19 +1,15 @@
-﻿using System;
-using System.IO;
-using System.IO.Compression;
+﻿using System.IO;
 using BenchmarkDotNet.Attributes;
 using BenchmarkDotNet.Running;
-using GzipTest;
-using GzipTest.Compress;
-using GzipTest.Gzip;
+using GzipTest.Model;
+using GzipTest.Processor;
 
 namespace Benchmark
 {
     [MemoryDiagnoser]
     public class CompressorReadAndWriteBenchmark
     {
-        [Params(8)] public uint Concurrency;
-
+        [Params("80","1024")] public string BatchSize;
         private const string Prefix = @"C:\Users\kartsev\Documents\";
         private const string FileToZip = Prefix + "enwik8.txt";
         private const string ZipFile = Prefix + "enwik8.gz";
@@ -23,7 +19,8 @@ namespace Benchmark
         [Benchmark]
         public void CompressReadAndWrite()
         {
-            using var compressor = Gzip.Processor(CompressionMode.Compress, FileToZip, ZipFile);
+            var args = UserArgs.ParseAndValidate(new[] {"compress", FileToZip, ZipFile, BatchSize});
+            using var compressor = Gzip.Processor(args!);
         
             compressor.Process();
         }
@@ -31,8 +28,10 @@ namespace Benchmark
         [Benchmark]
         public void DecompressReadAndWrite()
         {
-            using var decompressor = Gzip.Processor(CompressionMode.Decompress, FileToUnzip, UnzipFile);
-        
+            var args = UserArgs.ParseAndValidate(new[] {"decompress", FileToUnzip + BatchSize, UnzipFile, BatchSize});
+
+            using var decompressor = Gzip.Processor(args!);
+
             decompressor.Process();
         }
 

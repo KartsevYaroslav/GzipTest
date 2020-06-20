@@ -1,6 +1,6 @@
 ﻿using System.IO;
-using System.IO.Compression;
 using FluentAssertions;
+using GzipTest.Model;
 using NUnit.Framework;
 
 namespace GzipTest.Tests
@@ -32,12 +32,14 @@ namespace GzipTest.Tests
         [Test]
         public void Should_compress_and_decompress()
         {
-            using (var compressor = Gzip.Gzip.Processor(CompressionMode.Compress, FileToZip, ZipFile))
+            var args = UserArgs.ParseAndValidate(new[] {"compress", FileToZip, ZipFile});
+            using (var compressor = Processor.Gzip.Processor(args!))
             {
                 compressor.Process();
             }
 
-            using (var decompressor = Gzip.Gzip.Processor(CompressionMode.Decompress, ZipFile, UnzipFile))
+            var args1 = UserArgs.ParseAndValidate(new[] {"decompress", ZipFile, UnzipFile});
+            using (var decompressor = Processor.Gzip.Processor(args1!))
             {
                 decompressor.Process();
             }
