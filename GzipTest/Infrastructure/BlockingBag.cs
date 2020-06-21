@@ -7,27 +7,27 @@ namespace GzipTest.Infrastructure
 {
     public class BlockingBag<T> : IBlockingCollection<T>, IEnumerable<T>
     {
-        private readonly SemaphoreSlim addLimiter;
+        private readonly SemaphoreSlim addBounder;
         private readonly LinkedList<T> buffer;
         private readonly object lockObj;
-        private readonly Bounder takeLimiter;
+        private readonly Bounder takeBounder;
 
         public BlockingBag(int capacity)
         {
             buffer = new LinkedList<T>();
             lockObj = new object();
-            addLimiter = new SemaphoreSlim(capacity, capacity);
-            takeLimiter = new Bounder(capacity);
+            addBounder = new SemaphoreSlim(capacity, capacity);
+            takeBounder = new Bounder(capacity);
         }
 
-        private bool IsAddingComplete => takeLimiter.IsRealised;
+        private bool IsAddingComplete => takeBounder.IsRealised;
 
         public bool TryTake(out T value)
         {
             value = default!;
 
             if (!IsAddingComplete)
-                takeLimiter.WaitOne();
+                takeBounder.WaitOne();
 
             lock (lockObj)
             {
@@ -39,25 +39,25 @@ namespace GzipTest.Infrastructure
 
                 value = buffer.First.Value;
                 buffer.RemoveFirst();
-                addLimiter.Release();
+                addBounder.Release();
                 return true;
             }
         }
 
         public void Add(T value)
         {
-            addLimiter.Wait();
+            addBounder.Wait();
             lock (lockObj)
             {
                 buffer.AddLast(value);
             }
 
-            takeLimiter.ReleaseOne();
+            takeBounder.ReleaseOne();
         }
 
         public void CompleteAdding()
         {
-            takeLimiter.ReleaseAll();
+            takeBounder.ReleaseAll();
         }
 
         public void Dispose()
@@ -65,8 +65,8 @@ namespace GzipTest.Infrastructure
             if (!IsAddingComplete)
                 CompleteAdding();
 
-            addLimiter.Dispose();
-            takeLimiter.Dispose();
+            addBounder.Dispose();
+            takeBounder.Dispose();
         }
 
         public IEnumerator<T> GetEnumerator()

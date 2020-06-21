@@ -28,7 +28,6 @@ namespace GzipTest.Infrastructure
             Interlocked.Decrement(ref free);
         }
 
-
         public void ReleaseOne()
         {
             lock (lockObj)

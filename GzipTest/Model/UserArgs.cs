@@ -55,9 +55,8 @@ namespace GzipTest.Model
 
             if (File.Exists(args[2]))
             {
-                File.Delete(args[2]);
-                // Console.WriteLine($"File already exists '{args[2]}'");
-                // return null;
+                Console.WriteLine($"File already exists '{args[2]}'");
+                return null;
             }
 
             int? batchSize = null;
