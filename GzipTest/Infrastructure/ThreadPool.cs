@@ -9,7 +9,7 @@ namespace GzipTest.Infrastructure
         private readonly BlockingBag<ITask> tasks;
         private readonly Dictionary<ITask, ManualResetEvent> waitHandlerByTask;
 
-        public BackgroundThreadPool(uint workersCount)
+        public BackgroundThreadPool(int workersCount)
         {
             tasks = new BlockingBag<ITask>(workersCount);
             waitHandlerByTask = new Dictionary<ITask, ManualResetEvent>();

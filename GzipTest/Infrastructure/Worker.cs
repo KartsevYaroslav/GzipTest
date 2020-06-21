@@ -6,9 +6,9 @@ namespace GzipTest.Infrastructure
     {
         private readonly IThreadPool threadPool;
         private Task? task;
-        private bool IsStarted => task != null;
 
         public Worker(IThreadPool threadPool) => this.threadPool = threadPool;
+        private bool IsStarted => task != null;
 
         public void Run(Action action)
         {

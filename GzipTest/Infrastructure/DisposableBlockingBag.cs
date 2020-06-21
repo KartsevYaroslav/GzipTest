@@ -7,7 +7,7 @@ namespace GzipTest.Infrastructure
     {
         private readonly BlockingBag<T> innerBag;
 
-        public DisposableBlockingBag(uint concurrency) => innerBag = new BlockingBag<T>(concurrency);
+        public DisposableBlockingBag(int concurrency) => innerBag = new BlockingBag<T>(concurrency);
 
         public bool TryTake(out T value) => innerBag.TryTake(out value);
 
@@ -17,9 +17,8 @@ namespace GzipTest.Infrastructure
         public void Dispose()
         {
             foreach (var element in innerBag)
-            {
                 element.Dispose();
-            }
+            
             innerBag.Dispose();
         }
     }

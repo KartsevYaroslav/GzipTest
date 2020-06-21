@@ -6,7 +6,7 @@ namespace GzipTest.Model
 {
     public class Chunk : IDisposable
     {
-        private const int DefaultBufferSize = 1024 * 1024;
+        private const int DefaultBufferSize = 1024 * 80;
 
         public Chunk(long initialOffset, Stream content)
         {
@@ -16,6 +16,8 @@ namespace GzipTest.Model
 
         public long InitialOffset { get; }
         public Stream Content { get; }
+
+        public void Dispose() => Content.Dispose();
 
         public static Chunk FromCompressedStream(Stream stream)
         {
@@ -40,13 +42,11 @@ namespace GzipTest.Model
             Content.Dispose();
             memoryStream.Position = 0;
 
-            memoryStream.Write(checked((uint) memoryStream.Length) - headerLength);
+            memoryStream.Write(checked((int) memoryStream.Length) - headerLength);
             memoryStream.Write(InitialOffset);
             memoryStream.Position = 0;
 
             return memoryStream;
         }
-
-        public void Dispose() => Content.Dispose();
     }
 }

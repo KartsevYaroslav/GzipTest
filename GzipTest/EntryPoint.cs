@@ -20,13 +20,18 @@ namespace GzipTest
 
                 var processor = Gzip.Processor(arguments);
                 processor.Process();
-                
+
                 stopwatch.Stop();
                 Console.WriteLine($"Done. Elapsed {stopwatch.ElapsedMilliseconds} milliseconds");
             }
-            catch (Exception e)
+            catch (PlatformNotSupportedException ex)
             {
-                Console.WriteLine(e);
+                Console.WriteLine($"Platform not supported, StackTrace:{ex.StackTrace}");
+                return 1;
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine(ex);
                 return 1;
             }
 

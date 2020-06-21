@@ -8,6 +8,28 @@ namespace GzipTest.Model
 {
     public class UserArgs
     {
+        private const string HelpMessage =
+            "Usage:\n  GzipTest.exe [command] [input file name] [output file name] [options]\n\n" +
+            "Commands:\n  compress\n  decompress\n  help\n\n" +
+            "Options:\n  -b [arg]\tblock size in kb. Default value 80 (only for compress mode)";
+
+        private UserArgs(
+            CompressionMode compressionMode,
+            string inputFileName,
+            string outputFileName,
+            int? batchSize = null)
+        {
+            CompressionMode = compressionMode;
+            InputFileName = inputFileName;
+            OutputFileName = outputFileName;
+            BatchSize = batchSize ?? 1024 * 80;
+        }
+
+        public string InputFileName { get; }
+        public string OutputFileName { get; }
+        public int BatchSize { get; }
+        public CompressionMode CompressionMode { get; }
+
         public static UserArgs? ParseAndValidate(string[] args)
         {
             if (args.Length == 0 || args[0] == "help")
@@ -33,35 +55,31 @@ namespace GzipTest.Model
 
             if (File.Exists(args[2]))
             {
-                Console.WriteLine($"File already exists '{args[2]}'");
-                return null;
+                File.Delete(args[2]);
+                // Console.WriteLine($"File already exists '{args[2]}'");
+                // return null;
             }
 
-            uint? batchSize = null;
+            int? batchSize = null;
             if (args.Length > 4 && !ValidateBatchSize(args[3..5], out batchSize))
                 return null;
 
             return new UserArgs(mode, args[1], args[2], batchSize);
         }
 
-        private const string HelpMessage =
-            "Usage:\n  GzipTest.exe [command] [input file name] [output file name] [options]\n\n" +
-            "Commands:\n  compress\n  decompress\n  help\n\n" +
-            "Options:\n  -b [arg]\tblock size in kb. Default value 1024 (only for compress mode)";
-
-        private static bool ValidateBatchSize(IReadOnlyList<string> batchSizeArgs, out uint? batchSize)
+        private static bool ValidateBatchSize(IReadOnlyList<string> batchSizeArgs, out int? batchSize)
         {
             batchSize = null;
             if (batchSizeArgs[0] != "-b")
                 return true;
 
-            if (!uint.TryParse(batchSizeArgs[1], out var parsed))
+            if (!int.TryParse(batchSizeArgs[1], out var sizeInKb) || sizeInKb <= 0)
             {
                 Console.WriteLine($"Incorrect batch size value {batchSizeArgs[1]}. Should be positive integer");
                 return false;
             }
 
-            batchSize = parsed * 1024;
+            batchSize = sizeInKb * 1024;
             return true;
         }
 
@@ -98,22 +116,5 @@ namespace GzipTest.Model
 
             return true;
         }
-
-        private UserArgs(
-            CompressionMode compressionMode,
-            string inputFileName,
-            string outputFileName,
-            uint? batchSize = null)
-        {
-            CompressionMode = compressionMode;
-            InputFileName = inputFileName;
-            OutputFileName = outputFileName;
-            BatchSize = batchSize ?? 1024 * 1024;
-        }
-
-        public string InputFileName { get; }
-        public string OutputFileName { get; }
-        public uint BatchSize { get; }
-        public CompressionMode CompressionMode { get; }
     }
 }

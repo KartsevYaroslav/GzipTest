@@ -9,13 +9,13 @@ namespace GzipTest.Compress
 {
     internal class CompressFileReader : IProducer<Chunk>
     {
+        private readonly int batchSize;
         private readonly string fileName;
-        private readonly IBlockingCollection<Chunk> producingBag;
         private readonly MemoryMappedFile memoryMappedFile;
+        private readonly IBlockingCollection<Chunk> producingBag;
         private readonly Worker worker;
-        private readonly uint batchSize;
 
-        public CompressFileReader(string fileName, uint batchSize, IThreadPool threadPool, uint concurrency)
+        public CompressFileReader(string fileName, int batchSize, IThreadPool threadPool, int concurrency)
         {
             worker = new Worker(threadPool);
             this.fileName = fileName;
@@ -31,6 +31,8 @@ namespace GzipTest.Compress
         }
 
         public void Wait() => worker.Wait();
+
+        public void Dispose() => memoryMappedFile.Dispose();
 
         private void ReadFile()
         {
@@ -48,7 +50,5 @@ namespace GzipTest.Compress
 
             producingBag.CompleteAdding();
         }
-
-        public void Dispose() => memoryMappedFile.Dispose();
     }
 }

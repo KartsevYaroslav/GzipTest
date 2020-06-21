@@ -9,19 +9,18 @@ namespace GzipTest.Decompress
 {
     public class DecompressFileWriter : IConsumer<Chunk>
     {
-        private readonly MemoryMappedFile memoryMappedFile;
         private readonly BlockingBag<byte[]> buffersPool;
-        private volatile int writtenChunks;
-        private bool isDone;
         private readonly ManualResetEvent manualResetEvent;
+        private readonly MemoryMappedFile memoryMappedFile;
         private readonly Worker worker;
+        private bool isDone;
+        private volatile int writtenChunks;
 
         public DecompressFileWriter(
             IThreadPool threadPool,
             string fileName,
             long fileSize,
-            uint batchSize,
-            uint concurrency
+            int concurrency
         )
         {
             manualResetEvent = new ManualResetEvent(false);
@@ -36,9 +35,7 @@ namespace GzipTest.Decompress
 
             buffersPool = new BlockingBag<byte[]>(concurrency);
             for (var i = 0; i < concurrency; i++)
-            {
-                buffersPool.Add(new byte[batchSize]);
-            }
+                buffersPool.Add(new byte[1024 * 80]);
         }
 
         public void StartConsuming(IBlockingCollection<Chunk> consumingBag) => worker.Run(() => Write(consumingBag));

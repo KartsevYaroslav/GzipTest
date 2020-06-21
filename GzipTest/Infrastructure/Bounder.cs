@@ -6,10 +6,9 @@ namespace GzipTest.Infrastructure
     public class Bounder : IDisposable
     {
         private readonly int capacity;
-        private volatile int free;
-        private readonly SemaphoreSlim semaphoreSlim;
         private readonly object lockObj;
-        public bool IsRealised { get; private set; }
+        private readonly SemaphoreSlim semaphoreSlim;
+        private volatile int free;
 
         public Bounder(int capacity)
         {
@@ -18,6 +17,10 @@ namespace GzipTest.Infrastructure
             semaphoreSlim = new SemaphoreSlim(0, capacity);
             lockObj = new object();
         }
+
+        public bool IsRealised { get; private set; }
+
+        public void Dispose() => semaphoreSlim.Dispose();
 
         public void WaitOne()
         {
@@ -56,7 +59,5 @@ namespace GzipTest.Infrastructure
             if (IsRealised)
                 throw new InvalidOperationException("Bounder already released");
         }
-
-        public void Dispose() => semaphoreSlim.Dispose();
     }
 }

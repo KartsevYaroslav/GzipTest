@@ -1,6 +1,7 @@
 ﻿using System.IO;
 using FluentAssertions;
 using GzipTest.Model;
+using GzipTest.Processor;
 using NUnit.Framework;
 
 namespace GzipTest.Tests
@@ -11,13 +12,6 @@ namespace GzipTest.Tests
         private const string FileToZip = Prefix + "enwik7.txt";
         private const string ZipFile = Prefix + "enwik7.gz";
         private const string UnzipFile = Prefix + "enwik7_tmp";
-
-        [SetUp]
-        public void SetUp()
-        {
-            File.Create(UnzipFile).Dispose();
-            File.Create(ZipFile).Dispose();
-        }
 
         [TearDown]
         public void TearDown()
@@ -33,13 +27,13 @@ namespace GzipTest.Tests
         public void Should_compress_and_decompress()
         {
             var args = UserArgs.ParseAndValidate(new[] {"compress", FileToZip, ZipFile});
-            using (var compressor = Processor.Gzip.Processor(args!))
+            using (var compressor = Gzip.Processor(args!))
             {
                 compressor.Process();
             }
 
             var args1 = UserArgs.ParseAndValidate(new[] {"decompress", ZipFile, UnzipFile});
-            using (var decompressor = Processor.Gzip.Processor(args1!))
+            using (var decompressor = Gzip.Processor(args1!))
             {
                 decompressor.Process();
             }

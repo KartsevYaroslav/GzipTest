@@ -8,21 +8,21 @@ namespace GzipTest.Processor
         where TOut : IDisposable
         where TIn : IDisposable
     {
-        private readonly IProducer<TIn> producer;
         private readonly IConsumer<TOut> consumer;
-        private IBlockingCollection<TIn>? producingBag;
         private readonly IBlockingCollection<TOut> consumingBag;
         private readonly Func<TIn, TOut> mapper;
+        private readonly IProducer<TIn> producer;
         private readonly IThreadPool threadPool;
+        private readonly int transformConcurrency;
         private readonly List<ITask> transformTasks;
-        private readonly uint transformConcurrency;
+        private IBlockingCollection<TIn>? producingBag;
 
         public Processor(
             IProducer<TIn> producer,
             IConsumer<TOut> consumer,
             IThreadPool threadPool,
             Func<TIn, TOut> mapper,
-            uint transformConcurrency)
+            int transformConcurrency)
         {
             this.producer = producer;
             this.consumer = consumer;
@@ -37,6 +37,14 @@ namespace GzipTest.Processor
         {
             Start();
             Wait();
+        }
+
+        public void Dispose()
+        {
+            producer.Dispose();
+            consumer.Dispose();
+            consumingBag.Dispose();
+            threadPool.Dispose();
         }
 
         private void Start()
@@ -63,14 +71,6 @@ namespace GzipTest.Processor
             threadPool.WaitAll(transformTasks);
             consumingBag.CompleteAdding();
             consumer.Wait();
-        }
-
-        public void Dispose()
-        {
-            producer.Dispose();
-            consumer.Dispose();
-            consumingBag.Dispose();
-            threadPool.Dispose();
         }
     }
 }

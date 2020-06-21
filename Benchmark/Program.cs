@@ -9,19 +9,19 @@ namespace Benchmark
     [MemoryDiagnoser]
     public class CompressorReadAndWriteBenchmark
     {
-        [Params("80","1024")] public string BatchSize;
         private const string Prefix = @"C:\Users\kartsev\Documents\";
         private const string FileToZip = Prefix + "enwik8.txt";
         private const string ZipFile = Prefix + "enwik8.gz";
         private const string FileToUnzip = Prefix + "enwik8_tmp.gz";
         private const string UnzipFile = Prefix + "enwik8_tmp.txt";
+        [Params("80", "1024")] public string BatchSize;
 
         [Benchmark]
         public void CompressReadAndWrite()
         {
             var args = UserArgs.ParseAndValidate(new[] {"compress", FileToZip, ZipFile, BatchSize});
             using var compressor = Gzip.Processor(args!);
-        
+
             compressor.Process();
         }
 

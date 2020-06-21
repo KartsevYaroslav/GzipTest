@@ -7,12 +7,12 @@ namespace GzipTest.Decompress
 {
     public class DecompressFileReader : IProducer<Stream>
     {
-        private readonly string fileName;
         private readonly IBlockingCollection<Stream> bag;
-        private readonly Worker worker;
         private readonly long fileHeaderSize;
+        private readonly string fileName;
+        private readonly Worker worker;
 
-        public DecompressFileReader(string fileName, long fileHeaderSize, IThreadPool threadPool, uint concurrency)
+        public DecompressFileReader(string fileName, long fileHeaderSize, IThreadPool threadPool, int concurrency)
         {
             this.fileName = fileName;
             this.fileHeaderSize = fileHeaderSize;
@@ -29,6 +29,11 @@ namespace GzipTest.Decompress
 
         public void Wait() => worker.Wait();
 
+        public void Dispose()
+        {
+            bag.Dispose();
+        }
+
         private void ReadFile()
         {
             const int chunkLengthSize = sizeof(int);
@@ -42,7 +47,7 @@ namespace GzipTest.Decompress
             while (offset < fileInfo.Length)
             {
                 using var tmpStream = memoryMappedFile.CreateViewStream(offset, chunkLengthSize);
-                var chunkLength = tmpStream.ReadUInt32();
+                var chunkLength = tmpStream.ReadInt32();
 
                 var viewStream =
                     memoryMappedFile.CreateViewStream(offset + chunkLengthSize, chunkLength + initialOffsetSize);
@@ -51,11 +56,6 @@ namespace GzipTest.Decompress
             }
 
             bag.CompleteAdding();
-        }
-
-        public void Dispose()
-        {
-            bag.Dispose();
         }
     }
 }

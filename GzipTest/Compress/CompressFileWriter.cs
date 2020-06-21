@@ -6,11 +6,11 @@ namespace GzipTest.Compress
 {
     public class CompressFileWriter : IConsumer<Stream>
     {
+        private readonly long fileHeaderSize;
         private readonly string fileName;
         private readonly Worker worker;
-        private readonly long fileHeaderSize;
 
-        public CompressFileWriter(string fileName,long fileHeaderSize, IThreadPool threadPool)
+        public CompressFileWriter(string fileName, long fileHeaderSize, IThreadPool threadPool)
         {
             this.fileName = fileName;
             this.fileHeaderSize = fileHeaderSize;
@@ -21,6 +21,10 @@ namespace GzipTest.Compress
 
         public void Wait() => worker.Wait();
 
+        public void Dispose()
+        {
+        }
+
         private void Write(IBlockingCollection<Stream> producingBag)
         {
             using var fileStream = File.Open(fileName, FileMode.Open, FileAccess.Write);
@@ -28,10 +32,6 @@ namespace GzipTest.Compress
             fileStream.Position += fileHeaderSize;
             while (producingBag.TryTake(out var stream))
                 stream.CopyTo(fileStream);
-        }
-
-        public void Dispose()
-        {
         }
     }
 }

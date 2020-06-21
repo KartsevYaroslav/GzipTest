@@ -13,23 +13,27 @@ namespace GzipTest.Infrastructure
             Action<Stream, Stream> onComplete)
         {
             if (!buffersPool.TryTake(out var buffer))
-                throw new InvalidOperationException();
+                throw new InvalidOperationException("Buffers pool adding is completed. Cannot take the buffer");
 
-            var readBytes = source.Read(buffer);
+            source.BeginRead(buffer, 0, buffer.Length, ReadCallback, null);
 
-            if (readBytes > 0)
+            void ReadCallback(IAsyncResult writeResult)
             {
-                destination.BeginWrite(buffer, 0, readBytes, WriteCallback, null);
-                return;
-            }
+                var readBytes = source.EndRead(writeResult);
+                if (readBytes > 0)
+                {
+                    destination.BeginWrite(buffer, 0, readBytes, WriteCallback, null);
+                    return;
+                }
 
-            onComplete(source, destination);
+                buffersPool.Add(buffer);
+                onComplete(source, destination);
+            }
 
             void WriteCallback(IAsyncResult writeResult)
             {
                 destination.EndWrite(writeResult);
-                buffersPool.Add(buffer);
-                onComplete(source, destination);
+                source.BeginRead(buffer, 0, buffer.Length, ReadCallback, null);
             }
         }
 
@@ -47,11 +51,11 @@ namespace GzipTest.Infrastructure
             return BitConverter.ToInt64(buffer);
         }
 
-        public static uint ReadUInt32(this Stream stream)
+        public static int ReadInt32(this Stream stream)
         {
             Span<byte> buffer = stackalloc byte[4];
             stream.Read(buffer);
-            return BitConverter.ToUInt32(buffer);
+            return BitConverter.ToInt32(buffer);
         }
 
         public static void Write(this Stream stream, long initialOffset)
@@ -60,7 +64,7 @@ namespace GzipTest.Infrastructure
             stream.Write(offsetBytes);
         }
 
-        public static void Write(this Stream stream, uint value)
+        public static void Write(this Stream stream, int value)
         {
             var chunkSize = BitConverter.GetBytes(value);
             stream.Write(chunkSize);

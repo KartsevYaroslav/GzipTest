@@ -7,19 +7,20 @@ namespace GzipTest.Infrastructure
 {
     public class BlockingBag<T> : IBlockingCollection<T>, IEnumerable<T>
     {
+        private readonly SemaphoreSlim addLimiter;
         private readonly LinkedList<T> buffer;
         private readonly object lockObj;
-        private bool IsAddingComplete => takeLimiter.IsRealised;
-        private readonly SemaphoreSlim addLimiter;
         private readonly Bounder takeLimiter;
 
-        public BlockingBag(uint capacity)
+        public BlockingBag(int capacity)
         {
             buffer = new LinkedList<T>();
             lockObj = new object();
-            addLimiter = new SemaphoreSlim((int) capacity, (int) capacity);
-            takeLimiter = new Bounder((int) capacity);
+            addLimiter = new SemaphoreSlim(capacity, capacity);
+            takeLimiter = new Bounder(capacity);
         }
+
+        private bool IsAddingComplete => takeLimiter.IsRealised;
 
         public bool TryTake(out T value)
         {
