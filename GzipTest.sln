@@ -2,10 +2,6 @@
 Microsoft Visual Studio Solution File, Format Version 12.00
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "GzipTest", "GzipTest\GzipTest.csproj", "{B977058E-C5ED-4085-87C7-9BFA8EAD8A6E}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Benchmark", "Benchmark\Benchmark.csproj", "{09C37D4E-D67D-41F3-883A-ED0BB3115239}"
-EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "GzipTest.Tests", "GzipTest.Tests\GzipTest.Tests.csproj", "{7DA40509-DB66-4A7B-B898-7BDA67745215}"
-EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -16,13 +12,5 @@ Global
 		{B977058E-C5ED-4085-87C7-9BFA8EAD8A6E}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{B977058E-C5ED-4085-87C7-9BFA8EAD8A6E}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{B977058E-C5ED-4085-87C7-9BFA8EAD8A6E}.Release|Any CPU.Build.0 = Release|Any CPU
-		{09C37D4E-D67D-41F3-883A-ED0BB3115239}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{09C37D4E-D67D-41F3-883A-ED0BB3115239}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{09C37D4E-D67D-41F3-883A-ED0BB3115239}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{09C37D4E-D67D-41F3-883A-ED0BB3115239}.Release|Any CPU.Build.0 = Release|Any CPU
-		{7DA40509-DB66-4A7B-B898-7BDA67745215}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{7DA40509-DB66-4A7B-B898-7BDA67745215}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{7DA40509-DB66-4A7B-B898-7BDA67745215}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{7DA40509-DB66-4A7B-B898-7BDA67745215}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 EndGlobal
