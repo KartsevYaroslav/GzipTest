@@ -9,5 +9,7 @@ namespace GzipTest.Infrastructure
         public Task(Action task) => this.task = task;
 
         public void Run() => task();
+
+        public static implicit operator Task(Action action) => new Task(action);
     }
 }

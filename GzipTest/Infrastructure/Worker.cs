@@ -15,7 +15,7 @@ namespace GzipTest.Infrastructure
             if (IsStarted)
                 throw new InvalidOperationException("Worker already started");
 
-            task = new Task(action);
+            task = action;
             threadPool.RunTask(task);
         }
 
